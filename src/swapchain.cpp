@@ -127,12 +127,12 @@ Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physical_device,
     create_info.pQueueFamilyIndices = nullptr;
   }
 
-  if (vkCreateSwapchainKHR(device, &create_info, nullptr, &m_swapchain) !=
+  VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+  if (vkCreateSwapchainKHR(device, &create_info, nullptr, &swapchain) !=
       VK_SUCCESS) {
     throw exceptions::SwapchainCreationError{};
   }
-  m_swapchain.wrapped.parent = device;
-  m_swapchain.wrapped.destroy_function = vkDestroySwapchainKHR;
+  m_swapchain = {swapchain, device};
 
   m_image_format = surface_format.format;
 
@@ -145,7 +145,7 @@ Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physical_device,
   for (VkImage image : m_images) {
     m_image_views.emplace_back(make_image_view(device, image, m_image_format,
                                                VK_IMAGE_ASPECT_COLOR_BIT),
-                               device, vkDestroyImageView);
+                               device);
   }
 }
 
@@ -172,7 +172,7 @@ void Swapchain::make_framebuffers(VkDevice device, VkRenderPass render_pass) {
       throw exceptions::FramebufferCreationError{};
     }
 
-    m_framebuffers.emplace_back(framebuffer, device, vkDestroyFramebuffer);
+    m_framebuffers.emplace_back(framebuffer, device);
   }
 }
 

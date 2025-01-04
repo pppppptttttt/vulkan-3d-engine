@@ -2,6 +2,7 @@
 
 #include "engine_exceptions.hpp"
 #include "vulkan_destroyable.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace engine::core {
 
@@ -16,12 +17,12 @@ public:
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .pNext = nullptr,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT};
-    if (vkCreateFence(device, &fence_create_info, nullptr, &m_fence) !=
+    VkFence fence = VK_NULL_HANDLE;
+    if (vkCreateFence(device, &fence_create_info, nullptr, &fence) !=
         VK_SUCCESS) {
       throw exceptions::SyncPrimitivesCreationError{};
     }
-    m_fence.wrapped.parent = device;
-    m_fence.wrapped.destroy_function = vkDestroyFence;
+    m_fence = {fence, device};
   }
 
   void wait() {
@@ -45,12 +46,12 @@ public:
         .pNext = nullptr,
         .flags = 0};
 
-    if (vkCreateSemaphore(device, &sem_create_info, nullptr, &m_semaphore) !=
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+    if (vkCreateSemaphore(device, &sem_create_info, nullptr, &semaphore) !=
         VK_SUCCESS) {
       throw exceptions::SyncPrimitivesCreationError{};
     }
-    m_semaphore.wrapped.parent = device;
-    m_semaphore.wrapped.destroy_function = vkDestroySemaphore;
+    m_semaphore = {semaphore, device};
   }
 
   [[nodiscard]] VkSemaphore semaphore() const { return m_semaphore; }

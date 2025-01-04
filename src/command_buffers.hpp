@@ -62,12 +62,12 @@ public:
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = *ind.graphics_family};
 
-    if (vkCreateCommandPool(device, &create_info, nullptr, &m_command_pool) !=
+    VkCommandPool command_pool = VK_NULL_HANDLE;
+    if (vkCreateCommandPool(device, &create_info, nullptr, &command_pool) !=
         VK_SUCCESS) {
       throw exceptions::CommandPoolCreationError{};
     }
-    m_command_pool.wrapped.parent = device;
-    m_command_pool.wrapped.destroy_function = vkDestroyCommandPool;
+    m_command_pool = {command_pool, device};
   }
 
   [[nodiscard]] std::vector<CommandBuffer> make_command_buffers(std::size_t count) const {

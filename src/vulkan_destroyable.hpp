@@ -12,19 +12,12 @@
 
 namespace engine::core {
 
-template <typename VkType> void destroy_vulkan_object(VkType);
-
-template <> inline void destroy_vulkan_object<VkInstance>(VkInstance instance) {
-  vkDestroyInstance(instance, nullptr);
-}
-
-template <> inline void destroy_vulkan_object<VkDevice>(VkDevice device) {
-  vkDestroyDevice(device, nullptr);
-}
-
+// Parental object
 template <typename VkType> struct VkDestroyable {
-  VkType object = VK_NULL_HANDLE; // NOLINT
+private:
+  VkType object = VK_NULL_HANDLE;
 
+public:
   VkDestroyable() = default;
   VkDestroyable(VkType object) : object(object) {}
 
@@ -47,68 +40,87 @@ template <typename VkType> struct VkDestroyable {
   VkType *operator&() { return &object; }             // NOLINT
   const VkType *operator&() const { return &object; } // NOLINT
 
-  ~VkDestroyable() {
+  ~VkDestroyable()
+    requires std::is_same_v<VkType, VkInstance>
+  {
     if (object != VK_NULL_HANDLE) {
-      destroy_vulkan_object(object);
+      vkDestroyInstance(object, nullptr);
+    }
+  }
+
+  ~VkDestroyable()
+    requires std::is_same_v<VkType, VkDevice>
+  {
+    if (object != VK_NULL_HANDLE) {
+      vkDestroyDevice(object, nullptr);
     }
   }
 };
 
-template <typename VkParent, typename VkChild>
-using VkDestroyFunctionT = void (*)(VkParent, VkChild,
+template <typename VkParentT, typename VkObjectT>
+using VkDestroyFunctionT = void (*)(VkParentT, VkObjectT,
                                     const VkAllocationCallbacks *);
 
-template <typename VkParent, typename VkChild>
-void destroy_vulkan_object(VkParent parent, VkChild child,
-                           VkDestroyFunctionT<VkParent, VkChild> destroyer) {
-  destroyer(parent, child, nullptr);
-}
-
-template <typename VkChild, typename VkParent> struct VkDestroyableResource {
-  VkChild object = VK_NULL_HANDLE;
-  VkParent parent = VK_NULL_HANDLE;
-  VkDestroyFunctionT<VkParent, VkChild> destroy_function = nullptr;
+template <typename VkObjectT, typename VkParentT,
+          VkDestroyFunctionT<VkParentT, VkObjectT> destroy_function>
+struct VkDestroyableObjectWrapper {
+  VkObjectT object = VK_NULL_HANDLE;
+  VkParentT parent = VK_NULL_HANDLE;
 };
 
 // NOLINTBEGIN
-#define VK_DESTROYABLE_RESOURCE_SPEC(VkType, Destroyer)                        \
-  using VkType##Wrapper = VkDestroyableResource<VkType, VkInstance>
+#define ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkType, Destroyer)      \
+  using VkType##Wrapper =                                                      \
+      VkDestroyableObjectWrapper<VkType, VkInstance, Destroyer>
 
-VK_DESTROYABLE_RESOURCE_SPEC(VkDebugUtilsMessengerEXT,
-                             vkDestroyDebugUtilsMessengerEXT);
-VK_DESTROYABLE_RESOURCE_SPEC(VkSurfaceKHR, vkDestroySurfaceKHR);
+void DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                   VkDebugUtilsMessengerEXT debugMessenger,
+                                   const VkAllocationCallbacks *pAllocator);
 
-#undef VK_DESTROYABLE_RESOURCE_SPEC
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkDebugUtilsMessengerEXT,
+                                               DestroyDebugUtilsMessengerEXT);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkSurfaceKHR,
+                                               vkDestroySurfaceKHR);
 
-#define VK_DESTROYABLE_RESOURCE_SPEC(VkType, Destroyer)                        \
-  using VkType##Wrapper = VkDestroyableResource<VkType, VkDevice>
+#undef ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC
 
-VK_DESTROYABLE_RESOURCE_SPEC(VkSwapchainKHR, vkDestroySwapchainKHR);
-VK_DESTROYABLE_RESOURCE_SPEC(VkImage, vkDestroyImage);
-VK_DESTROYABLE_RESOURCE_SPEC(VkImageView, vkDestroyImageView);
-VK_DESTROYABLE_RESOURCE_SPEC(VkShaderModule, vkDestroyShaderModule);
-VK_DESTROYABLE_RESOURCE_SPEC(VkPipelineLayout, vkDestroyPipelineLayout);
-VK_DESTROYABLE_RESOURCE_SPEC(VkRenderPass, vkDestroyRenderPass);
-VK_DESTROYABLE_RESOURCE_SPEC(VkFramebuffer, vkDestroyFramebuffer);
-VK_DESTROYABLE_RESOURCE_SPEC(VkPipeline, vkDestroyPipeline);
-VK_DESTROYABLE_RESOURCE_SPEC(VkCommandPool, vkDestroyCommandPool);
-VK_DESTROYABLE_RESOURCE_SPEC(VkFence, vkDestroyFence);
-VK_DESTROYABLE_RESOURCE_SPEC(VkSemaphore, vkDestroySemaphore);
+#define ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkType, Destroyer)      \
+  using VkType##Wrapper =                                                      \
+      VkDestroyableObjectWrapper<VkType, VkDevice, Destroyer>
 
-#undef VK_DESTROYABLE_RESOURCE_SPEC
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkSwapchainKHR,
+                                               vkDestroySwapchainKHR);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkImage, vkDestroyImage);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkImageView, vkDestroyImageView);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkShaderModule,
+                                               vkDestroyShaderModule);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkPipelineLayout,
+                                               vkDestroyPipelineLayout);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkRenderPass,
+                                               vkDestroyRenderPass);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkFramebuffer,
+                                               vkDestroyFramebuffer);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkPipeline, vkDestroyPipeline);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkCommandPool,
+                                               vkDestroyCommandPool);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkFence, vkDestroyFence);
+ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC(VkSemaphore, vkDestroySemaphore);
+
+#undef ENGINE_CORE_VK_DESTROYABLE_OBJECT_WRAPPER_SPEC
 // NOLINTEND
 
-template <typename T, typename U>
-struct VkDestroyable<VkDestroyableResource<T, U>> {
+template <typename T, typename U, VkDestroyFunctionT<U, T> destroyer>
+struct VkDestroyable<VkDestroyableObjectWrapper<T, U, destroyer>> {
+private:
   using VkType = T;
-  using WrappedT = VkDestroyableResource<T, U>;
+  using WrappedT = VkDestroyableObjectWrapper<T, U, destroyer>;
 
-  WrappedT wrapped; // NOLINT
+  WrappedT wrapped;
 
+public:
   VkDestroyable() = default;
 
-  VkDestroyable(T object, U parent, VkDestroyFunctionT<U, T> destroyer)
-      : wrapped(object, parent, destroyer) {};
+  VkDestroyable(T object, U parent) : wrapped(object, parent) {};
 
   VkDestroyable(const VkDestroyable &other) = delete;
   VkDestroyable &operator=(const VkDestroyable &other) = delete;
@@ -123,10 +135,9 @@ struct VkDestroyable<VkDestroyableResource<T, U>> {
   }
 
   ~VkDestroyable() {
-    if (wrapped.destroy_function != nullptr &&
-        wrapped.parent != VK_NULL_HANDLE && wrapped.object != VK_NULL_HANDLE) {
-      destroy_vulkan_object(wrapped.parent, wrapped.object,
-                            wrapped.destroy_function);
+    if (destroyer != nullptr && wrapped.parent != VK_NULL_HANDLE &&
+        wrapped.object != VK_NULL_HANDLE) {
+      destroyer(wrapped.parent, wrapped.object, nullptr);
     }
   }
 

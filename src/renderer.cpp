@@ -132,17 +132,6 @@ VkResult CreateDebugUtilsMessengerEXT(
   }
 }
 
-void DestroyDebugUtilsMessengerEXT(VkInstance instance,
-                                   VkDebugUtilsMessengerEXT debugMessenger,
-                                   const VkAllocationCallbacks *pAllocator) {
-  // NOLINTNEXTLINE
-  auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
-      vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
-  if (func != nullptr) {
-    func(instance, debugMessenger, pAllocator);
-  }
-}
-
 VkDebugUtilsMessengerEXT make_debug_messenger(VkInstance instance) {
   if constexpr (!ENABLE_VALIDATION_LAYERS) {
     return VK_NULL_HANDLE;
@@ -218,12 +207,21 @@ VkDevice make_logical_device(VkPhysicalDevice physical_device,
 
 } // namespace
 
+void DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                   VkDebugUtilsMessengerEXT debugMessenger,
+                                   const VkAllocationCallbacks *pAllocator) {
+  // NOLINTNEXTLINE
+  auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+      vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
+  if (func != nullptr) {
+    func(instance, debugMessenger, pAllocator);
+  }
+}
+
 Renderer::Renderer(const Window &window)
     : m_instance(make_instance()),
-      m_debug_messenger(make_debug_messenger(m_instance), m_instance,
-                        DestroyDebugUtilsMessengerEXT),
-      m_surface(make_surface(m_instance, window.handle), m_instance,
-                vkDestroySurfaceKHR),
+      m_debug_messenger(make_debug_messenger(m_instance), m_instance),
+      m_surface(make_surface(m_instance, window.handle), m_instance),
       m_physical_device(choose_physical_device(m_instance, m_surface)),
       m_device(make_logical_device(m_physical_device, m_surface)),
       m_graphics_queue(m_physical_device, m_surface, m_device,

@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace engine::core {
 
@@ -47,12 +48,12 @@ public:
         .codeSize = code.size(),
         // NOLINTNEXTLINE
         .pCode = reinterpret_cast<const unsigned *>(code.data())};
-    if (vkCreateShaderModule(device, &create_info, nullptr, &m_module) !=
+    VkShaderModule module = VK_NULL_HANDLE;
+    if (vkCreateShaderModule(device, &create_info, nullptr, &module) !=
         VK_SUCCESS) {
       throw exceptions::ShaderModuleCreationError{};
     }
-    m_module.wrapped.parent = device;
-    m_module.wrapped.destroy_function = vkDestroyShaderModule;
+    m_module = {module, device};
   }
 
   [[nodiscard]] VkShaderModule get_module() const { return m_module; }

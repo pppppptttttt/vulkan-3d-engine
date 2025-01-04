@@ -70,12 +70,12 @@ RenderingPipeline::RenderingPipeline(
       .dependencyCount = 1,
       .pDependencies = &subpass_dependency};
 
-  if (vkCreateRenderPass(device, &render_psas_info, nullptr, &m_render_pass) !=
+  VkRenderPass render_pass = VK_NULL_HANDLE;
+  if (vkCreateRenderPass(device, &render_psas_info, nullptr, &render_pass) !=
       VK_SUCCESS) {
     throw exceptions::RenderPassCreationError{};
   }
-  m_render_pass.wrapped.parent = device;
-  m_render_pass.wrapped.destroy_function = vkDestroyRenderPass;
+  m_render_pass = {render_pass, device};
 
   swapchain.make_framebuffers(device, m_render_pass);
 
@@ -237,12 +237,12 @@ RenderingPipeline::RenderingPipeline(
       .pPushConstantRanges = nullptr // Optional
   };
 
+  VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
   if (vkCreatePipelineLayout(device, &pipeline_layout_create_info, nullptr,
-                             &m_pipeline_layout) != VK_SUCCESS) {
+                             &pipeline_layout) != VK_SUCCESS) {
     throw exceptions::PipelineLayoutCreationError{};
   }
-  m_pipeline_layout.wrapped.parent = device;
-  m_pipeline_layout.wrapped.destroy_function = vkDestroyPipelineLayout;
+  m_pipeline_layout = {pipeline_layout, device};
 
   const VkGraphicsPipelineCreateInfo pipeline_info{
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -265,12 +265,12 @@ RenderingPipeline::RenderingPipeline(
       .basePipelineHandle = VK_NULL_HANDLE,
       .basePipelineIndex = -1};
 
+  VkPipeline pipeline = VK_NULL_HANDLE;
   if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info,
-                                nullptr, &m_pipeline) != VK_SUCCESS) {
+                                nullptr, &pipeline) != VK_SUCCESS) {
     throw exceptions::RenderingPipelineCreationError{};
   }
-  m_pipeline.wrapped.parent = device;
-  m_pipeline.wrapped.destroy_function = vkDestroyPipeline;
+  m_pipeline = {pipeline, device};
 }
 
 } // namespace engine::core
