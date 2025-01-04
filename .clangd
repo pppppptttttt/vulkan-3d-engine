@@ -1,0 +1,4 @@
+# use clang-tidy from cli. otherwise it eats too much cpu
+Diagnostics:
+  ClangTidy:
+    Remove: '*'
