@@ -1,11 +1,12 @@
 #pragma once
 
-#include "vulkan_destroyable.hpp"
-#include "window.hpp"
-#include <vector>
-#include <vulkan/vulkan_core.h>
+#include "vulkan_destroyable.hpp" // for VkDestroyable, VkFramebufferWrapper
+#include <vector>                 // for vector
+#include <vulkan/vulkan_core.h>   // for VkDevice, VkExtent2D, VkFormat
 
 namespace engine::core {
+
+struct Window;
 
 class Swapchain {
 private:

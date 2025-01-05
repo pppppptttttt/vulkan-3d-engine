@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdexcept>
-#include <string>
+#include <stdexcept> // for runtime_error
+#include <string>    // for string
 
 namespace engine::exceptions {
 

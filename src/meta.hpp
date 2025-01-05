@@ -1,8 +1,9 @@
 #pragma once
 
-#include <filesystem>
-#include <string_view>
-#include <vulkan/vulkan_core.h>
+#include <array>                // for array
+#include <filesystem>           // for path
+#include <string_view>          // for string_view
+#include <vulkan/vulkan_core.h> // for VK_KHR_SWAPCHAIN_EXTENSION_NAME
 
 namespace engine {
 

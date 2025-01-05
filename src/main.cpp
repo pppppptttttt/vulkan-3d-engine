@@ -1,6 +1,8 @@
-#include "application.hpp"
-#include "engine_exceptions.hpp"
-#include <print>
+#include "application.hpp"       // for Application
+#include "engine_exceptions.hpp" // for EngineError
+#include <exception>             // for exception
+#include <ios>                   // for ios_base
+#include <print>                 // for println
 
 int main() try {
   engine::Application app;

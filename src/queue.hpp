@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <vulkan/vulkan.h>
+#include <cstdint>              // for uint8_t
+#include <vulkan/vulkan_core.h> // for VkQueue, VK_NULL_HANDLE, VkDevice
 
 namespace engine::core {
 

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "engine_exceptions.hpp"
-#include "meta.hpp"
-#include "vulkan_destroyable.hpp"
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <vector>
-#include <vulkan/vulkan_core.h>
+#include "meta.hpp"               // for PATH_TO_BINARIES
+#include "vulkan_destroyable.hpp" // for VkDestroyable, VkShaderModuleWrapper
+#include <cstddef>                // for size_t
+#include <cstdint>                // for uint8_t
+#include <filesystem>             // for path, operator/
+#include <fstream>                // for basic_ifstream, operator|, basic_ios
+#include <vector>                 // for vector
+#include <vulkan/vulkan_core.h>   // for VkDevice, VkShaderModule
 
 namespace engine::core {
 
@@ -38,23 +38,7 @@ private:
   VkDestroyable<VkShaderModuleWrapper> m_module;
 
 public:
-  Shader(VkDevice device, const std::filesystem::path &relative_path) {
-    const std::vector<char> code = read_file(PATH_TO_SHADERS / relative_path);
-
-    const VkShaderModuleCreateInfo create_info{
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .codeSize = code.size(),
-        // NOLINTNEXTLINE
-        .pCode = reinterpret_cast<const unsigned *>(code.data())};
-    VkShaderModule module = VK_NULL_HANDLE;
-    if (vkCreateShaderModule(device, &create_info, nullptr, &module) !=
-        VK_SUCCESS) {
-      throw exceptions::ShaderModuleCreationError{};
-    }
-    m_module = {module, device};
-  }
+  Shader(VkDevice device, const std::filesystem::path &relative_path);
 
   [[nodiscard]] VkShaderModule get_module() const { return m_module; }
 };

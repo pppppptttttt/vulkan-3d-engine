@@ -1,12 +1,14 @@
 #pragma once
 
-#include "command_buffers.hpp"
-#include "queue.hpp"
-#include "rendering_pipeline.hpp"
-#include "swapchain.hpp"
-#include "synchronization.hpp"
-#include "vulkan_destroyable.hpp"
-#include "window.hpp"
+#include <vulkan/vulkan_core.h>    // for vkDeviceWaitIdle, VkDevice, VkInst...
+#include <array>                   // for array
+#include <cstddef>                 // for size_t
+#include "command_buffers.hpp"     // for CommandBuffer, CommandPool
+#include "queue.hpp"               // for CommandQueue
+#include "rendering_pipeline.hpp"  // for RenderingPipeline
+#include "swapchain.hpp"           // for Window, Swapchain
+#include "synchronization.hpp"     // for Semaphore, Fence
+#include "vulkan_destroyable.hpp"  // for VkDestroyable, VkDebugUtilsMesseng...
 
 namespace engine::core {
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "renderer.hpp"
-#include "window.hpp"
+#include "renderer.hpp" // for Renderer
+#include "window.hpp"   // for Window
 
 namespace engine {
 

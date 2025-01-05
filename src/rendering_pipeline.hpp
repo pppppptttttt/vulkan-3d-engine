@@ -1,11 +1,14 @@
 #pragma once
 
-#include "shader.hpp"
-#include "swapchain.hpp"
-#include <filesystem>
-#include <map>
+#include "shader.hpp"             // for Shader
+#include "vulkan_destroyable.hpp" // for VkDestroyable, VkPipelineLayoutWra...
+#include <filesystem>             // for path
+#include <map>                    // for map
+#include <vulkan/vulkan_core.h>   // for VkDevice, VkPipeline, VkRenderPass
 
 namespace engine::core {
+
+class Swapchain;
 
 class RenderingPipeline {
 private:

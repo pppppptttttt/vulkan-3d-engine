@@ -6,7 +6,6 @@
 #include <cassert>
 #include <concepts>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
 namespace engine::core {
 
@@ -70,7 +69,8 @@ public:
     m_command_pool = {command_pool, device};
   }
 
-  [[nodiscard]] std::vector<CommandBuffer> make_command_buffers(std::size_t count) const {
+  [[nodiscard]] std::vector<CommandBuffer>
+  make_command_buffers(std::size_t count) const {
     std::vector<VkCommandBuffer> vk_command_buffers(count);
     const VkCommandBufferAllocateInfo allocate_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,

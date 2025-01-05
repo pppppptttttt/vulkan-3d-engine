@@ -1,4 +1,6 @@
 #include "application.hpp"
+#include "SDL3/SDL_events.h"  // for SDL_EventType, SDL_PollEvent, SDL_Event
+#include "SDL3/SDL_keycode.h" // for SDLK_ESCAPE
 
 namespace engine {
 

@@ -1,9 +1,6 @@
 #pragma once
 
-#include "engine_exceptions.hpp"
-#include "meta.hpp"
-
-#include <SDL3/SDL.h>
+#include "SDL3/SDL_video.h" // for SDL_Window
 
 namespace engine::core {
 
@@ -14,23 +11,8 @@ struct Window {
   int height = 600;
   // NOLINTEND
 
-  Window() {
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-      throw exceptions::WindowCreationError(SDL_GetError());
-    }
-
-    handle = SDL_CreateWindow(APPLICATION_NAME.data(), width, height,
-                              SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-
-    if (!handle) {
-      throw exceptions::WindowCreationError(SDL_GetError());
-    }
-  }
-
-  ~Window() {
-    SDL_DestroyWindow(handle);
-    SDL_Quit();
-  }
+  Window();
+  ~Window();
 
   Window(const Window &) = delete;
   Window(Window &&) = delete;

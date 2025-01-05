@@ -1,9 +1,13 @@
 #include "physical_device_queries.hpp"
-#include "engine_exceptions.hpp"
-#include "meta.hpp"
-#include <algorithm>
-#include <map>
-#include <vector>
+#include "engine_exceptions.hpp" // for SuitableGPUNotFound
+#include "meta.hpp"              // for DEVICE_EXTENSIONS
+#include <algorithm>             // for find_if, remove
+#include <array>                 // for array
+#include <cstddef>               // for size_t
+#include <map>                   // for map, operator==, _Rb_tree_iterator
+#include <string>                // for operator==, string
+#include <utility>               // for pair
+#include <vector>                // for vector
 
 namespace {
 
@@ -61,7 +65,8 @@ namespace engine::core {
 
 QueueFamilyIndices find_queue_families(VkPhysicalDevice device,
                                        VkSurfaceKHR surface) {
-  static std::map<std::pair<VkPhysicalDevice, VkSurfaceKHR>, QueueFamilyIndices> cache;
+  static std::map<std::pair<VkPhysicalDevice, VkSurfaceKHR>, QueueFamilyIndices>
+      cache;
   if (auto it = cache.find({device, surface}); it != cache.end()) {
     return it->second;
   }

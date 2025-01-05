@@ -2,14 +2,15 @@
 
 #include "engine_exceptions.hpp"
 #include "vulkan_destroyable.hpp"
-#include <vulkan/vulkan_core.h>
+#include <cstdint>
+#include <limits>
 
 namespace engine::core {
 
 class Fence {
 private:
   VkDestroyable<VkFenceWrapper> m_fence;
-  VkDevice m_device;
+  VkDevice m_device = VK_NULL_HANDLE;
 
 public:
   Fence() = default;

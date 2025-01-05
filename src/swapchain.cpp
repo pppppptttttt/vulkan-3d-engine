@@ -1,7 +1,13 @@
 #include "swapchain.hpp"
-#include "physical_device_queries.hpp"
-#include <cassert>
-#include <vulkan/vulkan_core.h>
+#include "engine_exceptions.hpp"       // for FramebufferCreationError, Ima...
+#include "physical_device_queries.hpp" // for QueueFamilyIndices, find_queu...
+#include "window.hpp"                  // for Window
+#include <algorithm>                   // for clamp, find_if
+#include <array>                       // for array
+#include <cassert>                     // for assert
+#include <limits>                      // for numeric_limits
+#include <optional>                    // for optional, operator!=
+#include <vulkan/vulkan_core.h>        // for VkPresentModeKHR, VkStructure...
 
 namespace engine::core {
 

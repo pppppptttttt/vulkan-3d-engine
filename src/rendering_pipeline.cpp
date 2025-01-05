@@ -1,5 +1,9 @@
 #include "rendering_pipeline.hpp"
-#include <vulkan/vulkan_core.h>
+#include "engine_exceptions.hpp" // for PipelineLayoutCreationError, Render...
+#include "swapchain.hpp"         // for Swapchain
+#include <array>                 // for array
+#include <vector>                // for vector
+#include <vulkan/vulkan_core.h>  // for VkStructureType, VkShaderStageFlagBits
 
 namespace engine::core {
 

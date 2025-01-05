@@ -5,7 +5,6 @@
 // Note: huge inspiration on `vulkan cookbook` repo idea ---
 // https://github.com/PacktPublishing/Vulkan-Cookbook/blob/master/Library/Common%20Files/VulkanDestroyer.h
 
-#include <memory>
 #include <utility>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>

@@ -1,18 +1,29 @@
 #include "renderer.hpp"
-#include "engine_exceptions.hpp"
-#include "meta.hpp"
-#include "physical_device_queries.hpp"
-#include "window.hpp"
-#include <SDL3/SDL_vulkan.h>
-#include <algorithm>
-#include <cassert>
-#include <cstring>
-#include <print>
-#include <set>
-#include <span>
-#include <vector>
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
+#include "SDL3/SDL_error.h"            // for SDL_GetError
+#include "SDL3/SDL_video.h"            // for SDL_Window
+#include "engine_exceptions.hpp"       // for AcquireWindowExtensionsError
+#include "meta.hpp"                    // for VALIDATION_LAYERS, ENABLE_VAL...
+#include "physical_device_queries.hpp" // for QueueFamilyIndices, choose_ph...
+#include "shader.hpp"                  // for Shader
+#include "synchronization.hpp"         // for Semaphore, Fence
+#include "window.hpp"                  // for Window
+#include <SDL3/SDL_vulkan.h>           // for SDL_Vulkan_CreateSurface, SDL...
+#include <algorithm>                   // for all_of, find_if
+#include <cassert>                     // for assert
+#include <cstdint>                     // for uint64_t
+#include <cstdio>                      // for stderr
+#include <cstring>                     // for strcmp
+#include <filesystem>                  // for path
+#include <limits>                      // for numeric_limits
+#include <map>                         // for _Rb_tree_const_iterator, map
+#include <optional>                    // for optional
+#include <print>                       // for println
+#include <set>                         // for set
+#include <span>                        // for span
+#include <utility>                     // for pair
+#include <vector>                      // for vector
+#include <vulkan/vk_platform.h>        // for VKAPI_ATTR, VKAPI_CALL
+#include <vulkan/vulkan_core.h>        // for VkStructureType, VkResult
 
 namespace engine::core {
 
@@ -250,7 +261,7 @@ Renderer::Renderer(Window &window)
   const auto &vec_command_buffers =
       m_command_pool.make_command_buffers(FRAME_OVERLAP);
   for (std::size_t i = 0; i < FRAME_OVERLAP; ++i) {
-    m_command_buffers[i] = std::move(vec_command_buffers[i]);
+    m_command_buffers[i] = vec_command_buffers[i];
   }
 }
 
@@ -258,7 +269,7 @@ void Renderer::render_frame() {
   m_render_fences[m_current_frame].wait();
 
   unsigned image_index = 0;
-  VkResult acquire_result =
+  const VkResult acquire_result =
       vkAcquireNextImageKHR(m_device, m_swapchain.swapchain(),
                             std::numeric_limits<std::uint64_t>::max(),
                             m_swapchain_semaphores[m_current_frame].semaphore(),
@@ -339,7 +350,7 @@ void Renderer::render_frame() {
       .pResults = nullptr,
   };
 
-  VkResult present_result =
+  const VkResult present_result =
       vkQueuePresentKHR(m_present_queue.queue(), &present_info);
 
   switch (present_result) {

@@ -1,8 +1,9 @@
 #include "queue.hpp"
-#include "physical_device_queries.hpp"
-#include "engine_exceptions.hpp"
-#include <cassert>
-#include <utility>
+#include "engine_exceptions.hpp"       // for SubmitCommandBufferError
+#include "physical_device_queries.hpp" // for QueueFamilyIndices, find_queu...
+#include <cassert>                     // for assert
+#include <optional>                    // for optional
+#include <utility>                     // for unreachable
 
 namespace engine::core {
 
