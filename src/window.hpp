@@ -20,7 +20,7 @@ struct Window {
     }
 
     handle = SDL_CreateWindow(APPLICATION_NAME.data(), width, height,
-                              SDL_WINDOW_VULKAN /*| SDL_WINDOW_RESIZABLE*/);
+                              SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     if (!handle) {
       throw exceptions::WindowCreationError(SDL_GetError());

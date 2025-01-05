@@ -12,6 +12,8 @@ private:
   VkDevice m_device;
 
 public:
+  Fence() = default;
+
   Fence(VkDevice device) : m_device(device) {
     const VkFenceCreateInfo fence_create_info{
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -40,6 +42,8 @@ private:
   VkDestroyable<VkSemaphoreWrapper> m_semaphore;
 
 public:
+  Semaphore() = default;
+
   Semaphore(VkDevice device) {
     const VkSemaphoreCreateInfo sem_create_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,

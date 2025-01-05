@@ -102,4 +102,8 @@ struct SubmitCommandBufferError : EngineError {
       : EngineError("Failed to submit draw command buffer!") {}
 };
 
+struct PresentSwapchainError : EngineError {
+  PresentSwapchainError() : EngineError("Failed to present swapchain image!") {}
+};
+
 } // namespace engine::exceptions

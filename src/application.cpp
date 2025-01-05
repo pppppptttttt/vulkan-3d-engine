@@ -12,6 +12,9 @@ void Application::run() {
       if (ev.type == SDL_EVENT_QUIT) {
         quit = true;
         break;
+      } else if (ev.type == SDL_EVENT_WINDOW_RESIZED) {
+        m_window.width = ev.window.data1;
+        m_window.height = ev.window.data2;
       } else if (ev.type == SDL_EVENT_KEY_DOWN) {
         quit = ev.key.key == SDLK_ESCAPE;
       }

@@ -77,7 +77,7 @@ RenderingPipeline::RenderingPipeline(
   }
   m_render_pass = {render_pass, device};
 
-  swapchain.make_framebuffers(device, m_render_pass);
+  swapchain.make_framebuffers(m_render_pass);
 
   std::map<Shader::Stage, Shader> shader_modules;
   for (const auto &[stage, filename] : shaders) {

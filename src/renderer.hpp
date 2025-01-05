@@ -1,20 +1,18 @@
 #pragma once
 
+#include "command_buffers.hpp"
+#include "queue.hpp"
 #include "rendering_pipeline.hpp"
+#include "swapchain.hpp"
 #include "synchronization.hpp"
 #include "vulkan_destroyable.hpp"
 #include "window.hpp"
-#include "queue.hpp"
-#include "swapchain.hpp"
-#include "command_buffers.hpp"
-#include <vulkan/vulkan_core.h>
 
 namespace engine::core {
 
 class Renderer {
 public:
-  Renderer(const Window &window);
-  ~Renderer() = default;
+  Renderer(Window &window);
 
   void render_frame();
   void wait_idle() const { vkDeviceWaitIdle(m_device); }
@@ -24,7 +22,11 @@ public:
   Renderer &operator=(const Renderer &) = delete;
   Renderer &operator=(Renderer &&) noexcept = delete;
 
+  static constexpr std::size_t FRAME_OVERLAP = 2;
+
 private:
+  std::size_t m_current_frame;
+  Window &m_window;
   VkDestroyable<VkInstance> m_instance;
   VkDestroyable<VkDebugUtilsMessengerEXTWrapper> m_debug_messenger;
   VkDestroyable<VkSurfaceKHRWrapper> m_surface;
@@ -35,13 +37,11 @@ private:
   CommandQueue m_transfer_queue;
   Swapchain m_swapchain;
   RenderingPipeline m_graphics_pipeline;
-  /*static constexpr std::size_t FRAME_OVERLAP = 2;*/
-  /*std::size_t m_current_frame;*/
   CommandPool m_command_pool;
-  CommandBuffer m_command_buffers;
-  Fence m_render_fence;
-  Semaphore m_swapchain_semaphore;
-  Semaphore m_render_semaphore;
+  std::array<CommandBuffer, FRAME_OVERLAP> m_command_buffers;
+  std::array<Fence, FRAME_OVERLAP> m_render_fences;
+  std::array<Semaphore, FRAME_OVERLAP> m_swapchain_semaphores;
+  std::array<Semaphore, FRAME_OVERLAP> m_render_semaphores;
 };
 
 } // namespace engine::core

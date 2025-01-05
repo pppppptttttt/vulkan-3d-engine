@@ -59,7 +59,9 @@ Swapchain::get_swapchain_support_details(VkPhysicalDevice device,
 }
 
 Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physical_device,
-                     VkSurfaceKHR surface, const Window &window) {
+                     VkSurfaceKHR surface, const Window &window,
+                     VkRenderPass render_pass)
+    : m_device(device) {
   auto [surface_capabilities, surface_formats, present_modes] =
       get_swapchain_support_details(physical_device, surface);
 
@@ -99,40 +101,39 @@ Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physical_device,
     image_count = surface_capabilities.maxImageCount;
   }
 
-  VkSwapchainCreateInfoKHR create_info = {
-      .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-      .pNext = nullptr,
-      .flags = 0,
-      .surface = surface,
-      .minImageCount = image_count,
-      .imageFormat = surface_format.format,
-      .imageColorSpace = surface_format.colorSpace,
-      .imageExtent = m_extent,
-      .imageArrayLayers = 1,
-      .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-      .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-      .queueFamilyIndexCount = 0,
-      .pQueueFamilyIndices = nullptr,
-      .preTransform = surface_capabilities.currentTransform,
-      .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-      .presentMode = present_mode,
-      .clipped = VK_TRUE,
-      .oldSwapchain = VK_NULL_HANDLE};
+  m_create_info = {.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+                   .pNext = nullptr,
+                   .flags = 0,
+                   .surface = surface,
+                   .minImageCount = image_count,
+                   .imageFormat = surface_format.format,
+                   .imageColorSpace = surface_format.colorSpace,
+                   .imageExtent = m_extent,
+                   .imageArrayLayers = 1,
+                   .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                   .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                   .queueFamilyIndexCount = 0,
+                   .pQueueFamilyIndices = nullptr,
+                   .preTransform = surface_capabilities.currentTransform,
+                   .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                   .presentMode = present_mode,
+                   .clipped = VK_TRUE,
+                   .oldSwapchain = VK_NULL_HANDLE};
 
   const QueueFamilyIndices ind = find_queue_families(physical_device, surface);
   assert(ind.graphics_family && ind.present_family);
   if (ind.graphics_family != ind.present_family) {
-    create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    create_info.queueFamilyIndexCount = 0;
-    create_info.pQueueFamilyIndices = nullptr;
+    m_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    m_create_info.queueFamilyIndexCount = 0;
+    m_create_info.pQueueFamilyIndices = nullptr;
   }
 
   VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-  if (vkCreateSwapchainKHR(device, &create_info, nullptr, &swapchain) !=
+  if (vkCreateSwapchainKHR(m_device, &m_create_info, nullptr, &swapchain) !=
       VK_SUCCESS) {
     throw exceptions::SwapchainCreationError{};
   }
-  m_swapchain = {swapchain, device};
+  m_swapchain = {swapchain, m_device};
 
   m_image_format = surface_format.format;
 
@@ -147,9 +148,13 @@ Swapchain::Swapchain(VkDevice device, VkPhysicalDevice physical_device,
                                                VK_IMAGE_ASPECT_COLOR_BIT),
                                device);
   }
+
+  if (render_pass != VK_NULL_HANDLE) {
+    make_framebuffers(render_pass);
+  }
 }
 
-void Swapchain::make_framebuffers(VkDevice device, VkRenderPass render_pass) {
+void Swapchain::make_framebuffers(VkRenderPass render_pass) {
   for (VkImageView image_view : m_image_views) {
     const std::array<VkImageView, 1> attachments = {
         image_view}; //,
@@ -167,12 +172,12 @@ void Swapchain::make_framebuffers(VkDevice device, VkRenderPass render_pass) {
         .layers = 1};
 
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
-    if (vkCreateFramebuffer(device, &create_info, nullptr, &framebuffer) !=
+    if (vkCreateFramebuffer(m_device, &create_info, nullptr, &framebuffer) !=
         VK_SUCCESS) {
       throw exceptions::FramebufferCreationError{};
     }
 
-    m_framebuffers.emplace_back(framebuffer, device);
+    m_framebuffers.emplace_back(framebuffer, m_device);
   }
 }
 

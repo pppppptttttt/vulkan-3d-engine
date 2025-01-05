@@ -4,6 +4,7 @@
 #include "physical_device_queries.hpp"
 #include "window.hpp"
 #include <SDL3/SDL_vulkan.h>
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <print>
@@ -218,8 +219,8 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
   }
 }
 
-Renderer::Renderer(const Window &window)
-    : m_instance(make_instance()),
+Renderer::Renderer(Window &window)
+    : m_current_frame(0), m_window(window), m_instance(make_instance()),
       m_debug_messenger(make_debug_messenger(m_instance), m_instance),
       m_surface(make_surface(m_instance, window.handle), m_instance),
       m_physical_device(choose_physical_device(m_instance, m_surface)),
@@ -235,23 +236,53 @@ Renderer::Renderer(const Window &window)
           m_device, m_swapchain,
           {{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},
            {Shader::Stage::FRAGMENT, "triangle.frag.glsl.spv"}}),
-      /*m_current_frame(0),*/
-      m_command_pool(m_device, m_physical_device, m_surface),
-      m_command_buffers(m_command_pool.make_command_buffers(1).front()),
-      m_render_fence(m_device), m_swapchain_semaphore(m_device),
-      m_render_semaphore(m_device) {}
+      m_command_pool(m_device, m_physical_device, m_surface) {
+  for (auto &semaphore : m_swapchain_semaphores) {
+    semaphore = Semaphore(m_device);
+  }
+  for (auto &semaphore : m_render_semaphores) {
+    semaphore = Semaphore(m_device);
+  }
+  for (auto &fence : m_render_fences) {
+    fence = Fence(m_device);
+  }
+
+  const auto &vec_command_buffers =
+      m_command_pool.make_command_buffers(FRAME_OVERLAP);
+  for (std::size_t i = 0; i < FRAME_OVERLAP; ++i) {
+    m_command_buffers[i] = std::move(vec_command_buffers[i]);
+  }
+}
 
 void Renderer::render_frame() {
-  m_render_fence.wait();
-  m_render_fence.reset();
+  m_render_fences[m_current_frame].wait();
 
   unsigned image_index = 0;
-  vkAcquireNextImageKHR(m_device, m_swapchain.swapchain(),
-                        std::numeric_limits<std::uint64_t>::max(),
-                        m_swapchain_semaphore.semaphore(), VK_NULL_HANDLE,
-                        &image_index);
+  VkResult acquire_result =
+      vkAcquireNextImageKHR(m_device, m_swapchain.swapchain(),
+                            std::numeric_limits<std::uint64_t>::max(),
+                            m_swapchain_semaphores[m_current_frame].semaphore(),
+                            VK_NULL_HANDLE, &image_index);
 
-  m_command_buffers.reset();
+  switch (acquire_result) {
+  case VK_ERROR_OUT_OF_DATE_KHR:
+    vkDeviceWaitIdle(m_device);
+    m_swapchain = Swapchain(m_device, m_physical_device, m_surface, m_window,
+                            m_graphics_pipeline.render_pass());
+    return;
+    break;
+
+  case VK_SUCCESS:
+  case VK_SUBOPTIMAL_KHR:
+    break;
+
+  default:
+    throw exceptions::AcquireWindowExtensionsError{};
+  }
+
+  m_render_fences[m_current_frame].reset();
+
+  m_command_buffers[m_current_frame].reset();
   auto draw_commands = [this, image_index](VkCommandBuffer command_buffer) {
     const std::array<VkClearValue, 2> clear_values{
         {{{{0.05f, 0.05f, 0.05f, 1.0f}}}, {{{1.0f, 0}}}}};
@@ -273,11 +304,14 @@ void Renderer::render_frame() {
 
     vkCmdEndRenderPass(command_buffer);
   };
-  m_command_buffers.record(draw_commands);
+  m_command_buffers[m_current_frame].record(draw_commands);
 
-  VkSemaphore wait_semaphores[] = {m_swapchain_semaphore.semaphore()};
-  VkCommandBuffer command_buffers[] = {m_command_buffers.buffer()};
-  VkSemaphore signal_semaphores[] = {m_render_semaphore.semaphore()};
+  VkSemaphore wait_semaphores[] = {
+      m_swapchain_semaphores[m_current_frame].semaphore()};
+  VkCommandBuffer command_buffers[] = {
+      m_command_buffers[m_current_frame].buffer()};
+  VkSemaphore signal_semaphores[] = {
+      m_render_semaphores[m_current_frame].semaphore()};
   VkPipelineStageFlags wait_stages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
@@ -290,9 +324,8 @@ void Renderer::render_frame() {
                                  .pCommandBuffers = command_buffers,
                                  .signalSemaphoreCount = 1,
                                  .pSignalSemaphores = signal_semaphores};
-  m_graphics_queue.submit(submit_info, m_render_fence.fence());
-  /*++m_current_frame;*/
-  /*m_current_frame %= FRAME_OVERLAP;*/
+  m_graphics_queue.submit(submit_info,
+                          m_render_fences[m_current_frame].fence());
 
   VkSwapchainKHR swapchain_ptr[] = {m_swapchain.swapchain()};
   const VkPresentInfoKHR present_info{
@@ -306,8 +339,25 @@ void Renderer::render_frame() {
       .pResults = nullptr,
   };
 
-  vkQueuePresentKHR(m_present_queue.queue(), &present_info);
-  /*std::exit(0);*/
+  VkResult present_result =
+      vkQueuePresentKHR(m_present_queue.queue(), &present_info);
+
+  switch (present_result) {
+  case VK_ERROR_OUT_OF_DATE_KHR:
+  case VK_SUBOPTIMAL_KHR:
+    vkDeviceWaitIdle(m_device);
+    m_swapchain = Swapchain(m_device, m_physical_device, m_surface, m_window,
+                            m_graphics_pipeline.render_pass());
+
+  case VK_SUCCESS:
+    break;
+
+  default:
+    throw exceptions::PresentSwapchainError{};
+  }
+
+  ++m_current_frame;
+  m_current_frame %= FRAME_OVERLAP;
 }
 
 } // namespace engine::core
