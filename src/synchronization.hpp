@@ -1,9 +1,9 @@
 #pragma once
 
-#include "engine_exceptions.hpp"
-#include "vulkan_destroyable.hpp"
-#include <cstdint>
-#include <limits>
+#include "vulkan_destroyable.hpp" // for VkDestroyable, VkFenceWrapper, VkS...
+#include <cstdint>                // for uint64_t
+#include <limits>                 // for numeric_limits
+#include <vulkan/vulkan_core.h>   // for VkDevice, vkResetFences, vkWaitFor...
 
 namespace engine::core {
 
@@ -15,18 +15,7 @@ private:
 public:
   Fence() = default;
 
-  Fence(VkDevice device) : m_device(device) {
-    const VkFenceCreateInfo fence_create_info{
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT};
-    VkFence fence = VK_NULL_HANDLE;
-    if (vkCreateFence(device, &fence_create_info, nullptr, &fence) !=
-        VK_SUCCESS) {
-      throw exceptions::SyncPrimitivesCreationError{};
-    }
-    m_fence = {fence, device};
-  }
+  Fence(VkDevice device);
 
   void wait() {
     vkWaitForFences(m_device, 1, &m_fence, VK_TRUE,
@@ -45,19 +34,7 @@ private:
 public:
   Semaphore() = default;
 
-  Semaphore(VkDevice device) {
-    const VkSemaphoreCreateInfo sem_create_info{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0};
-
-    VkSemaphore semaphore = VK_NULL_HANDLE;
-    if (vkCreateSemaphore(device, &sem_create_info, nullptr, &semaphore) !=
-        VK_SUCCESS) {
-      throw exceptions::SyncPrimitivesCreationError{};
-    }
-    m_semaphore = {semaphore, device};
-  }
+  Semaphore(VkDevice device);
 
   [[nodiscard]] VkSemaphore semaphore() const { return m_semaphore; }
 };

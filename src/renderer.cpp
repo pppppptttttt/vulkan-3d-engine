@@ -4,26 +4,28 @@
 #include "engine_exceptions.hpp"       // for AcquireWindowExtensionsError
 #include "meta.hpp"                    // for VALIDATION_LAYERS, ENABLE_VAL...
 #include "physical_device_queries.hpp" // for QueueFamilyIndices, choose_ph...
-#include "shader.hpp"                  // for Shader
-#include "synchronization.hpp"         // for Semaphore, Fence
-#include "window.hpp"                  // for Window
-#include <SDL3/SDL_vulkan.h>           // for SDL_Vulkan_CreateSurface, SDL...
-#include <algorithm>                   // for all_of, find_if
-#include <cassert>                     // for assert
-#include <cstdint>                     // for uint64_t
-#include <cstdio>                      // for stderr
-#include <cstring>                     // for strcmp
-#include <filesystem>                  // for path
-#include <limits>                      // for numeric_limits
-#include <map>                         // for _Rb_tree_const_iterator, map
-#include <optional>                    // for optional
-#include <print>                       // for println
-#include <set>                         // for set
-#include <span>                        // for span
-#include <utility>                     // for pair
-#include <vector>                      // for vector
-#include <vulkan/vk_platform.h>        // for VKAPI_ATTR, VKAPI_CALL
-#include <vulkan/vulkan_core.h>        // for VkStructureType, VkResult
+#include "rendering_pipeline.hpp"
+#include "shader.hpp"           // for Shader
+#include "synchronization.hpp"  // for Semaphore, Fence
+#include "window.hpp"           // for Window
+#include <SDL3/SDL_vulkan.h>    // for SDL_Vulkan_CreateSurface, SDL...
+#include <algorithm>            // for all_of, find_if
+#include <array>                // for array
+#include <cassert>              // for assert
+#include <cstdint>              // for uint64_t
+#include <cstdio>               // for stderr
+#include <cstring>              // for strcmp
+#include <filesystem>           // for path
+#include <limits>               // for numeric_limits
+#include <map>                  // for _Rb_tree_const_iterator, map
+#include <optional>             // for optional
+#include <print>                // for println
+#include <set>                  // for set
+#include <span>                 // for span
+#include <utility>              // for pair
+#include <vector>               // for vector
+#include <vulkan/vk_platform.h> // for VKAPI_ATTR, VKAPI_CALL
+#include <vulkan/vulkan_core.h> // for VkStructureType, VkResult
 
 namespace engine::core {
 
@@ -217,6 +219,80 @@ VkDevice make_logical_device(VkPhysicalDevice physical_device,
   return device;
 }
 
+VkRenderPass make_render_pass(VkDevice device, Swapchain &swapchain) {
+  const VkAttachmentDescription color_attachment{
+      .flags = 0,
+      .format = swapchain.image_format(),
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR};
+
+  const VkAttachmentReference color_attachment_reference{
+      .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+  /*const VkAttachmentDescription depth_attachment{*/
+  /*    .flags = 0,*/
+  /*    .format = find_depth_format(),*/
+  /*    .samples = VK_SAMPLE_COUNT_1_BIT,*/
+  /*    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,*/
+  /*    .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,*/
+  /*    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,*/
+  /*    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,*/
+  /*    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,*/
+  /*    .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};*/
+  /**/
+  /*const VkAttachmentReference depth_attachment_reference{*/
+  /*    .attachment = 1,*/
+  /*    .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};*/
+
+  const VkSubpassDescription subpass{
+      .flags = 0,
+      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+      .inputAttachmentCount = 0,
+      .pInputAttachments = nullptr,
+      .colorAttachmentCount = 1,
+      .pColorAttachments = &color_attachment_reference,
+      .pResolveAttachments = nullptr,
+      .pDepthStencilAttachment = nullptr, //&depth_attachment_reference,
+      .preserveAttachmentCount = 0,
+      .pPreserveAttachments = nullptr};
+
+  const VkSubpassDependency subpass_dependency{
+      .srcSubpass = VK_SUBPASS_EXTERNAL,
+      .dstSubpass = 0,
+      .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .srcAccessMask = 0,
+      .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dependencyFlags = 0};
+
+  std::array<VkAttachmentDescription, 1> attachments = {color_attachment/*,
+                                                        depth_attachment*/};
+
+  const VkRenderPassCreateInfo render_psas_info{
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .attachmentCount = static_cast<unsigned>(attachments.size()),
+      .pAttachments = attachments.data(),
+      .subpassCount = 1,
+      .pSubpasses = &subpass,
+      .dependencyCount = 1,
+      .pDependencies = &subpass_dependency};
+
+  VkRenderPass render_pass = VK_NULL_HANDLE;
+  if (vkCreateRenderPass(device, &render_psas_info, nullptr, &render_pass) !=
+      VK_SUCCESS) {
+    throw exceptions::RenderPassCreationError{};
+  }
+  swapchain.make_framebuffers(render_pass);
+  return render_pass;
+}
+
 } // namespace
 
 void DestroyDebugUtilsMessengerEXT(VkInstance instance,
@@ -243,11 +319,28 @@ Renderer::Renderer(Window &window)
       m_transfer_queue(m_physical_device, m_surface, m_device,
                        CommandQueue::Kind::TRANSFER),
       m_swapchain(m_device, m_physical_device, m_surface, window),
-      m_graphics_pipeline(
-          m_device, m_swapchain,
-          {{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},
-           {Shader::Stage::FRAGMENT, "triangle.frag.glsl.spv"}}),
+      m_render_pass(make_render_pass(m_device, m_swapchain), m_device),
+      m_pipeline_layout(make_default_pipeline_layout(m_device)),
+      /*m_graphics_pipeline(*/
+      /*    m_device, m_swapchain, m_render_pass,*/
+      /*    {{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},*/
+      /*     {Shader::Stage::FRAGMENT, "triangle.frag.glsl.spv"}}),*/
       m_command_pool(m_device, m_physical_device, m_surface) {
+  RenderingPipelineMaker pipeline_maker(m_device);
+  m_pipeline =
+      pipeline_maker.set_pipeline_layout(m_pipeline_layout)
+          .set_shaders({{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},
+                        {Shader::Stage::FRAGMENT, "triangle.frag.glsl.spv"}})
+          .set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+          .set_polygon_mode(VK_POLYGON_MODE_FILL)
+          .set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
+          .set_no_multisampling()
+          .disable_blending()
+          .disable_depthtest()
+          .set_color_attachment_format(m_swapchain.image_format())
+          .set_depth_format(VK_FORMAT_UNDEFINED)
+          .make_rendering_pipeline(m_render_pass);
+
   for (auto &semaphore : m_swapchain_semaphores) {
     semaphore = Semaphore(m_device);
   }
@@ -279,7 +372,7 @@ void Renderer::render_frame() {
   case VK_ERROR_OUT_OF_DATE_KHR:
     vkDeviceWaitIdle(m_device);
     m_swapchain = Swapchain(m_device, m_physical_device, m_surface, m_window,
-                            m_graphics_pipeline.render_pass());
+                            m_render_pass);
     return;
     break;
 
@@ -301,7 +394,7 @@ void Renderer::render_frame() {
     const VkRenderPassBeginInfo render_pass_begin{
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext = nullptr,
-        .renderPass = m_graphics_pipeline.render_pass(),
+        .renderPass = m_render_pass,
         .framebuffer = m_swapchain.framebuffers()[image_index],
         .renderArea = {{0, 0}, m_swapchain.extent()},
         .clearValueCount = static_cast<unsigned>(clear_values.size()),
@@ -310,7 +403,21 @@ void Renderer::render_frame() {
     vkCmdBeginRenderPass(command_buffer, &render_pass_begin,
                          VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      m_graphics_pipeline.pipeline());
+                      m_pipeline);
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(m_swapchain.extent().width);
+    viewport.height = static_cast<float>(m_swapchain.extent().height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = m_swapchain.extent();
+    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
     vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
@@ -358,7 +465,7 @@ void Renderer::render_frame() {
   case VK_SUBOPTIMAL_KHR:
     vkDeviceWaitIdle(m_device);
     m_swapchain = Swapchain(m_device, m_physical_device, m_surface, m_window,
-                            m_graphics_pipeline.render_pass());
+                            m_render_pass);
 
   case VK_SUCCESS:
     break;

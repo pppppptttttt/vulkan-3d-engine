@@ -1,14 +1,13 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>    // for vkDeviceWaitIdle, VkDevice, VkInst...
-#include <array>                   // for array
-#include <cstddef>                 // for size_t
-#include "command_buffers.hpp"     // for CommandBuffer, CommandPool
-#include "queue.hpp"               // for CommandQueue
-#include "rendering_pipeline.hpp"  // for RenderingPipeline
-#include "swapchain.hpp"           // for Window, Swapchain
-#include "synchronization.hpp"     // for Semaphore, Fence
-#include "vulkan_destroyable.hpp"  // for VkDestroyable, VkDebugUtilsMesseng...
+#include "command_buffers.hpp"    // for CommandBuffer, CommandPool
+#include "queue.hpp"              // for CommandQueue
+#include "swapchain.hpp"          // for Window, Swapchain
+#include "synchronization.hpp"    // for Semaphore, Fence
+#include "vulkan_destroyable.hpp" // for VkDestroyable, VkDebugUtilsMesseng...
+#include <array>                  // for array
+#include <cstddef>                // for size_t
+#include <vulkan/vulkan_core.h>   // for vkDeviceWaitIdle, VkDevice, VkInst...
 
 namespace engine::core {
 
@@ -29,18 +28,28 @@ public:
 private:
   std::size_t m_current_frame;
   Window &m_window;
+
   VkDestroyable<VkInstance> m_instance;
   VkDestroyable<VkDebugUtilsMessengerEXTWrapper> m_debug_messenger;
+
   VkDestroyable<VkSurfaceKHRWrapper> m_surface;
+
   VkPhysicalDevice m_physical_device;
   VkDestroyable<VkDevice> m_device;
+
   CommandQueue m_graphics_queue;
   CommandQueue m_present_queue;
   CommandQueue m_transfer_queue;
+
   Swapchain m_swapchain;
-  RenderingPipeline m_graphics_pipeline;
+
+  VkDestroyable<VkRenderPassWrapper> m_render_pass;
+  VkDestroyable<VkPipelineLayoutWrapper> m_pipeline_layout;
+  VkDestroyable<VkPipelineWrapper> m_pipeline;
+
   CommandPool m_command_pool;
   std::array<CommandBuffer, FRAME_OVERLAP> m_command_buffers;
+
   std::array<Fence, FRAME_OVERLAP> m_render_fences;
   std::array<Semaphore, FRAME_OVERLAP> m_swapchain_semaphores;
   std::array<Semaphore, FRAME_OVERLAP> m_render_semaphores;

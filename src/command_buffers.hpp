@@ -1,11 +1,11 @@
 #pragma once
 
-#include "engine_exceptions.hpp"
-#include "physical_device_queries.hpp"
-#include "vulkan_destroyable.hpp"
-#include <cassert>
-#include <concepts>
-#include <vector>
+#include "engine_exceptions.hpp"  // for CommandPoolRecordError
+#include "vulkan_destroyable.hpp" // for VkCommandPoolWrapper, VkDestroyable
+#include <concepts>               // for invocable
+#include <cstddef>                // for size_t
+#include <vector>                 // for vector
+#include <vulkan/vulkan_core.h>   // for VkCommandBuffer, VkDevice, VkResult
 
 namespace engine::core {
 
@@ -50,46 +50,10 @@ private:
 
 public:
   CommandPool(VkDevice device, VkPhysicalDevice physical_device,
-              VkSurfaceKHR surface)
-      : m_device(device) {
-    QueueFamilyIndices ind = find_queue_families(physical_device, surface);
-    assert(ind.graphics_family);
-
-    const VkCommandPoolCreateInfo create_info{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = *ind.graphics_family};
-
-    VkCommandPool command_pool = VK_NULL_HANDLE;
-    if (vkCreateCommandPool(device, &create_info, nullptr, &command_pool) !=
-        VK_SUCCESS) {
-      throw exceptions::CommandPoolCreationError{};
-    }
-    m_command_pool = {command_pool, device};
-  }
+              VkSurfaceKHR surface);
 
   [[nodiscard]] std::vector<CommandBuffer>
-  make_command_buffers(std::size_t count) const {
-    std::vector<VkCommandBuffer> vk_command_buffers(count);
-    const VkCommandBufferAllocateInfo allocate_info{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .pNext = nullptr,
-        .commandPool = m_command_pool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = static_cast<unsigned>(vk_command_buffers.size())};
-
-    if (vkAllocateCommandBuffers(m_device, &allocate_info,
-                                 vk_command_buffers.data()) != VK_SUCCESS) {
-      throw exceptions::CommandPoolAllocaionError{};
-    }
-
-    std::vector<CommandBuffer> command_buffers(count);
-    for (std::size_t i = 0; i < count; ++i) {
-      command_buffers[i] = vk_command_buffers[i];
-    }
-    return command_buffers;
-  }
+  make_command_buffers(std::size_t count) const;
 };
 
 } // namespace engine::core
