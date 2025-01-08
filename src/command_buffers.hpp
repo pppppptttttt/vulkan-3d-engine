@@ -21,11 +21,12 @@ public:
     vkResetCommandBuffer(m_command_buffer, flags);
   }
 
-  void record(const std::invocable<VkCommandBuffer> auto &function) {
+  void record(const std::invocable<VkCommandBuffer> auto &function,
+              unsigned flags = 0) {
     const VkCommandBufferBeginInfo command_buffer_begin{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = nullptr,
-        .flags = 0,
+        .flags = flags,
         .pInheritanceInfo = nullptr};
 
     if (vkBeginCommandBuffer(m_command_buffer, &command_buffer_begin) !=
@@ -50,10 +51,18 @@ private:
 
 public:
   CommandPool(VkDevice device, VkPhysicalDevice physical_device,
-              VkSurfaceKHR surface);
+              VkSurfaceKHR surface, bool is_transfer = false);
 
   [[nodiscard]] std::vector<CommandBuffer>
   make_command_buffers(std::size_t count) const;
+
+  void free_command_buffers(const std::vector<CommandBuffer> &buffers) const {
+    vkFreeCommandBuffers(
+        m_device, m_command_pool, static_cast<unsigned>(buffers.size()),
+        reinterpret_cast<const VkCommandBuffer *>(buffers.data())); // NOLINT
+  }
+
+  [[nodiscard]] VkCommandPool command_pool() const { return m_command_pool; }
 };
 
 } // namespace engine::core

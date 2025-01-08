@@ -2,30 +2,36 @@
 #include "SDL3/SDL_error.h"            // for SDL_GetError
 #include "SDL3/SDL_video.h"            // for SDL_Window
 #include "engine_exceptions.hpp"       // for AcquireWindowExtensionsError
+#include "glm/detail/qualifier.hpp"    // for qualifier
+#include "glm/vec3.hpp"                // for vec<>::vec<3, type-parameter-...
+#include "glm/vec4.hpp"                // for vec<>::vec<4, type-parameter-...
+#include "mesh.hpp"                    // for Mesh
 #include "meta.hpp"                    // for VALIDATION_LAYERS, ENABLE_VAL...
 #include "physical_device_queries.hpp" // for QueueFamilyIndices, choose_ph...
-#include "rendering_pipeline.hpp"
-#include "shader.hpp"           // for Shader
-#include "synchronization.hpp"  // for Semaphore, Fence
-#include "window.hpp"           // for Window
-#include <SDL3/SDL_vulkan.h>    // for SDL_Vulkan_CreateSurface, SDL...
-#include <algorithm>            // for all_of, find_if
-#include <array>                // for array
-#include <cassert>              // for assert
-#include <cstdint>              // for uint64_t
-#include <cstdio>               // for stderr
-#include <cstring>              // for strcmp
-#include <filesystem>           // for path
-#include <limits>               // for numeric_limits
-#include <map>                  // for _Rb_tree_const_iterator, map
-#include <optional>             // for optional
-#include <print>                // for println
-#include <set>                  // for set
-#include <span>                 // for span
-#include <utility>              // for pair
-#include <vector>               // for vector
-#include <vulkan/vk_platform.h> // for VKAPI_ATTR, VKAPI_CALL
-#include <vulkan/vulkan_core.h> // for VkStructureType, VkResult
+#include "rendering_pipeline.hpp"      // for RenderingPipelineMaker, make_...
+#include "shader.hpp"                  // for Shader
+#include "synchronization.hpp"         // for Semaphore, Fence
+#include "vertex.hpp"                  // for Vertex
+#include "vulkan_buffers.hpp"          // for Buffer
+#include "window.hpp"                  // for Window
+#include <SDL3/SDL_vulkan.h>           // for SDL_Vulkan_CreateSurface, SDL...
+#include <algorithm>                   // for all_of, find_if
+#include <array>                       // for array
+#include <cassert>                     // for assert
+#include <cstdint>                     // for uint64_t
+#include <cstdio>                      // for stderr
+#include <cstring>                     // for strcmp
+#include <filesystem>                  // for path
+#include <limits>                      // for numeric_limits
+#include <map>                         // for _Rb_tree_const_iterator, map
+#include <optional>                    // for optional
+#include <print>                       // for println
+#include <set>                         // for set
+#include <span>                        // for span
+#include <utility>                     // for pair
+#include <vector>                      // for vector
+#include <vulkan/vk_platform.h>        // for VKAPI_ATTR, VKAPI_CALL
+#include <vulkan/vulkan_core.h>        // for VkStructureType, VkResult
 
 namespace engine::core {
 
@@ -321,11 +327,8 @@ Renderer::Renderer(Window &window)
       m_swapchain(m_device, m_physical_device, m_surface, window),
       m_render_pass(make_render_pass(m_device, m_swapchain), m_device),
       m_pipeline_layout(make_default_pipeline_layout(m_device)),
-      /*m_graphics_pipeline(*/
-      /*    m_device, m_swapchain, m_render_pass,*/
-      /*    {{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},*/
-      /*     {Shader::Stage::FRAGMENT, "triangle.frag.glsl.spv"}}),*/
-      m_command_pool(m_device, m_physical_device, m_surface) {
+      m_command_pool(m_device, m_physical_device, m_surface),
+      m_transfer_command_pool(m_device, m_physical_device, m_surface, true) {
   RenderingPipelineMaker pipeline_maker(m_device);
   m_pipeline =
       pipeline_maker.set_pipeline_layout(m_pipeline_layout)
@@ -339,8 +342,11 @@ Renderer::Renderer(Window &window)
           .disable_depthtest()
           .set_color_attachment_format(m_swapchain.image_format())
           .set_depth_format(VK_FORMAT_UNDEFINED)
+          .set_vertex_description(
+              resources::Vertex::binding_description(),
+              std::span(resources::Vertex::attribute_description().data(),
+                        resources::Vertex::attribute_description().size()))
           .make_rendering_pipeline(m_render_pass);
-
   for (auto &semaphore : m_swapchain_semaphores) {
     semaphore = Semaphore(m_device);
   }
@@ -356,6 +362,13 @@ Renderer::Renderer(Window &window)
   for (std::size_t i = 0; i < FRAME_OVERLAP; ++i) {
     m_command_buffers[i] = vec_command_buffers[i];
   }
+
+  std::vector<resources::Vertex> vertices = {
+      {{0.0f, -0.5f, 0.0f}, {}, {}, {1.0f, 0.0f, 1.0f, 1.0f}},
+      {{0.5f, 0.5f, 0.0f}, {}, {}, {0.0f, 1.0f, 1.0f, 1.0f}},
+      {{-0.5f, 0.5f, 0.0f}, {}, {}, {0.0f, 0.0f, 1.0f, 1.0f}}};
+
+  m_mesh = resources::Mesh(*this, vertices);
 }
 
 void Renderer::render_frame() {
@@ -418,6 +431,9 @@ void Renderer::render_frame() {
     scissor.extent = m_swapchain.extent();
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
+    VkBuffer vertex_buffers[] = {m_mesh.vertices().buffer()};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
@@ -476,6 +492,7 @@ void Renderer::render_frame() {
 
   ++m_current_frame;
   m_current_frame %= FRAME_OVERLAP;
+  /*std::exit(0);*/
 }
 
 } // namespace engine::core

@@ -1,21 +1,30 @@
 #include "command_buffers.hpp"
 #include "physical_device_queries.hpp" // for QueueFamilyIndices, find_queu...
 #include <cassert>                     // for assert
-#include <optional>                    // for optional
+#include <limits>
+#include <optional> // for optional
 
 namespace engine::core {
 
 CommandPool::CommandPool(VkDevice device, VkPhysicalDevice physical_device,
-                         VkSurfaceKHR surface)
+                         VkSurfaceKHR surface, bool is_transfer)
     : m_device(device) {
-  QueueFamilyIndices ind = find_queue_families(physical_device, surface);
-  assert(ind.graphics_family);
+  unsigned index = std::numeric_limits<unsigned>::max();
+  if (!is_transfer) {
+    QueueFamilyIndices ind = find_queue_families(physical_device, surface);
+    assert(ind.graphics_family);
+    index = *ind.graphics_family;
+  } else {
+    QueueFamilyIndices ind = find_queue_families(physical_device, surface);
+    assert(ind.transfer_family);
+    index = *ind.transfer_family;
+  }
 
   const VkCommandPoolCreateInfo create_info{
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       .pNext = nullptr,
       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-      .queueFamilyIndex = *ind.graphics_family};
+      .queueFamilyIndex = index};
 
   VkCommandPool command_pool = VK_NULL_HANDLE;
   if (vkCreateCommandPool(device, &create_info, nullptr, &command_pool) !=

@@ -15,21 +15,21 @@ private:
   std::vector<VkPipelineShaderStageCreateInfo> m_shader_stages;
   std::map<Shader::Stage, Shader> m_shader_modules;
 
-  VkPipelineInputAssemblyStateCreateInfo m_input_assembly;
-  VkPipelineRasterizationStateCreateInfo m_rasterizer;
-  VkPipelineColorBlendAttachmentState m_color_blend_attachment;
-  VkPipelineMultisampleStateCreateInfo m_multisampling;
-  VkPipelineLayout m_pipeline_layout;
-  VkPipelineDepthStencilStateCreateInfo m_depth_stencil;
-  VkPipelineRenderingCreateInfo m_render_info;
-  VkFormat m_color_attachment_format;
-  VkDevice m_device;
+  VkPipelineInputAssemblyStateCreateInfo m_input_assembly{};
+  VkPipelineRasterizationStateCreateInfo m_rasterizer{};
+  VkPipelineColorBlendAttachmentState m_color_blend_attachment{};
+  VkPipelineMultisampleStateCreateInfo m_multisampling{};
+  VkPipelineLayout m_pipeline_layout{};
+  VkPipelineDepthStencilStateCreateInfo m_depth_stencil{};
+  VkPipelineRenderingCreateInfo m_render_info{};
+  VkFormat m_color_attachment_format{};
+  VkVertexInputBindingDescription m_vertex_binding{};
+  std::vector<VkVertexInputAttributeDescription> m_vertex_attributes;
+  VkPipelineVertexInputStateCreateInfo m_vertex_input_info{};
+  VkDevice m_device = VK_NULL_HANDLE;
 
 public:
-  RenderingPipelineMaker(VkDevice device) {
-    reset();
-    m_device = device;
-  };
+  RenderingPipelineMaker(VkDevice device) : m_device(device) { reset(); };
 
   RenderingPipelineMaker &reset();
 
@@ -55,20 +55,49 @@ public:
 
   RenderingPipelineMaker &set_pipeline_layout(VkPipelineLayout layout);
 
+  RenderingPipelineMaker &set_vertex_description(
+      VkVertexInputBindingDescription binding,
+      std::span<VkVertexInputAttributeDescription> attributes) {
+    m_vertex_binding = binding;
+    m_vertex_attributes = std::vector(attributes.begin(), attributes.end());
+
+    m_vertex_input_info.vertexBindingDescriptionCount = 1;
+    m_vertex_input_info.pVertexBindingDescriptions = &m_vertex_binding;
+
+    m_vertex_input_info.vertexAttributeDescriptionCount =
+        static_cast<unsigned>(m_vertex_attributes.size());
+    m_vertex_input_info.pVertexAttributeDescriptions =
+        m_vertex_attributes.data();
+    return *this;
+  }
+
   VkDestroyable<VkPipelineWrapper>
   make_rendering_pipeline(VkRenderPass render_pass) const;
 
   RenderingPipelineMaker(const RenderingPipelineMaker &) = delete;
   RenderingPipelineMaker &operator=(const RenderingPipelineMaker &) = delete;
 
-  RenderingPipelineMaker(RenderingPipelineMaker &&other) {
+  RenderingPipelineMaker(RenderingPipelineMaker &&other) noexcept {
     *this = std::move(other);
   }
 
-  RenderingPipelineMaker &operator=(RenderingPipelineMaker &&other) {
+  RenderingPipelineMaker &operator=(RenderingPipelineMaker &&other) noexcept {
     if (this != &other) {
       reset();
-      std::swap(*this, other);
+      std::swap(m_shader_stages, other.m_shader_stages);
+      std::swap(m_shader_modules, other.m_shader_modules);
+      std::swap(m_input_assembly, other.m_input_assembly);
+      std::swap(m_rasterizer, other.m_rasterizer);
+      std::swap(m_color_blend_attachment, other.m_color_blend_attachment);
+      std::swap(m_multisampling, other.m_multisampling);
+      std::swap(m_pipeline_layout, other.m_pipeline_layout);
+      std::swap(m_depth_stencil, other.m_depth_stencil);
+      std::swap(m_render_info, other.m_render_info);
+      std::swap(m_color_attachment_format, other.m_color_attachment_format);
+      std::swap(m_vertex_binding, other.m_vertex_binding);
+      std::swap(m_vertex_attributes, other.m_vertex_attributes);
+      std::swap(m_vertex_input_info, other.m_vertex_input_info);
+      std::swap(m_device, other.m_device);
     }
     return *this;
   }

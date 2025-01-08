@@ -106,4 +106,18 @@ struct PresentSwapchainError : EngineError {
   PresentSwapchainError() : EngineError("Failed to present swapchain image!") {}
 };
 
+struct BufferCreationError : EngineError {
+  BufferCreationError() : EngineError("Failed to create buffer!") {}
+};
+
+struct SuitableMemoryTypeNotFound : EngineError {
+  SuitableMemoryTypeNotFound()
+      : EngineError("Failed to find suitable memory type!") {}
+};
+
+struct MemoryAllocationError : EngineError {
+  MemoryAllocationError()
+      : EngineError("Failed to allocate memory for vertex buffer!") {}
+};
+
 } // namespace engine::exceptions

@@ -119,4 +119,20 @@ VkPhysicalDevice choose_physical_device(VkInstance instance,
   return *device_it;
 }
 
+unsigned find_memory_type(VkPhysicalDevice device, unsigned type_filter,
+                          VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties mem_properties{};
+  vkGetPhysicalDeviceMemoryProperties(device, &mem_properties);
+
+  for (unsigned i = 0; i < mem_properties.memoryTypeCount; i++) {
+    if (type_filter & (1 << i) && (mem_properties.memoryTypes[i].propertyFlags &
+                                   properties) == properties) {
+      return i;
+    }
+  }
+
+  throw exceptions::SuitableMemoryTypeNotFound{};
+  return 0;
+}
+
 } // namespace engine::core

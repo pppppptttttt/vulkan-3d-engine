@@ -1,7 +1,9 @@
 #include "rendering_pipeline.hpp"
 #include "engine_exceptions.hpp" // for PipelineLayoutCreationError, Render...
+#include <array>                 // for array
 #include <cstdio>                // for stderr
 #include <print>                 // for println
+#include <span>                  // for span
 #include <stdexcept>             // for out_of_range
 #include <vector>                // for vector
 #include <vulkan/vulkan_core.h>  // for VkStructureType, VkShaderStageFlagBits
@@ -105,7 +107,7 @@ RenderingPipelineMaker &RenderingPipelineMaker::reset() {
   m_depth_stencil = {};
   m_render_info = {};
   m_color_attachment_format = {};
-  m_device = {};
+  m_vertex_input_info = {};
 
   m_input_assembly.sType =
       VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -116,8 +118,11 @@ RenderingPipelineMaker &RenderingPipelineMaker::reset() {
   m_depth_stencil.sType =
       VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
   m_render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+  m_vertex_input_info.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   return *this;
 }
+
 RenderingPipelineMaker &
 RenderingPipelineMaker::set_input_topology(VkPrimitiveTopology topology) {
   m_input_assembly.topology = topology;
@@ -131,6 +136,7 @@ RenderingPipelineMaker::set_polygon_mode(VkPolygonMode mode) {
   m_rasterizer.lineWidth = 1.0f;
   return *this;
 }
+
 RenderingPipelineMaker &
 RenderingPipelineMaker::set_cull_mode(VkCullModeFlags cull_mode,
                                       VkFrontFace front_face) {
@@ -193,52 +199,66 @@ RenderingPipelineMaker::set_pipeline_layout(VkPipelineLayout layout) {
 VkDestroyable<VkPipelineWrapper>
 RenderingPipelineMaker::make_rendering_pipeline(
     VkRenderPass render_pass) const {
-  VkPipelineViewportStateCreateInfo viewport_state = {};
-  viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-  viewport_state.pNext = nullptr;
+  const VkPipelineViewportStateCreateInfo viewport_state = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .viewportCount = 1,
+      .pViewports = nullptr,
+      .scissorCount = 1,
+      .pScissors = nullptr,
+  };
 
-  viewport_state.viewportCount = 1;
-  viewport_state.scissorCount = 1;
+  const VkPipelineColorBlendStateCreateInfo color_blending = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .logicOpEnable = VK_FALSE,
+      .logicOp = VK_LOGIC_OP_COPY,
+      .attachmentCount = 1,
+      .pAttachments = &m_color_blend_attachment,
+      .blendConstants = {},
+  };
 
-  VkPipelineColorBlendStateCreateInfo color_blending = {};
-  color_blending.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-  color_blending.pNext = nullptr;
+  /*const VkPipelineVertexInputStateCreateInfo vertex_input_info = {*/
+  /*    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,*/
+  /*    .pNext = nullptr,*/
+  /*    .flags = 0,*/
+  /*    .vertexBindingDescriptionCount = 0,*/
+  /*    .pVertexBindingDescriptions = nullptr,*/
+  /*    .vertexAttributeDescriptionCount = 0,*/
+  /*    .pVertexAttributeDescriptions = nullptr,*/
+  /*};*/
 
-  color_blending.logicOpEnable = VK_FALSE;
-  color_blending.logicOp = VK_LOGIC_OP_COPY;
-  color_blending.attachmentCount = 1;
-  color_blending.pAttachments = &m_color_blend_attachment;
-
-  VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
-  vertex_input_info.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-  VkGraphicsPipelineCreateInfo pipeline_info = {};
-  pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipeline_info.pNext = &m_render_info;
-
-  pipeline_info.stageCount = static_cast<unsigned>(m_shader_stages.size());
-  pipeline_info.pStages = m_shader_stages.data();
-  pipeline_info.pVertexInputState = &vertex_input_info;
-  pipeline_info.pInputAssemblyState = &m_input_assembly;
-  pipeline_info.pViewportState = &viewport_state;
-  pipeline_info.pRasterizationState = &m_rasterizer;
-  pipeline_info.pMultisampleState = &m_multisampling;
-  pipeline_info.pColorBlendState = &color_blending;
-  pipeline_info.pDepthStencilState = &m_depth_stencil;
-  pipeline_info.layout = m_pipeline_layout;
-  pipeline_info.renderPass = render_pass;
-
-  VkDynamicState state[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                            VK_DYNAMIC_STATE_SCISSOR};
+  std::array<VkDynamicState, 2> state = {VK_DYNAMIC_STATE_VIEWPORT,
+                                         VK_DYNAMIC_STATE_SCISSOR};
 
   VkPipelineDynamicStateCreateInfo dynamic_info = {};
   dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  dynamic_info.pDynamicStates = &state[0];
-  dynamic_info.dynamicStateCount = 2;
+  dynamic_info.pDynamicStates = state.data();
+  dynamic_info.dynamicStateCount = static_cast<unsigned>(state.size());
 
-  pipeline_info.pDynamicState = &dynamic_info;
+  const VkGraphicsPipelineCreateInfo pipeline_info = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .pNext = &m_render_info,
+      .flags = 0,
+      .stageCount = static_cast<unsigned>(m_shader_stages.size()),
+      .pStages = m_shader_stages.data(),
+      .pVertexInputState = &m_vertex_input_info,
+      .pInputAssemblyState = &m_input_assembly,
+      .pTessellationState = nullptr,
+      .pViewportState = &viewport_state,
+      .pRasterizationState = &m_rasterizer,
+      .pMultisampleState = &m_multisampling,
+      .pDepthStencilState = &m_depth_stencil,
+      .pColorBlendState = &color_blending,
+      .pDynamicState = &dynamic_info,
+      .layout = m_pipeline_layout,
+      .renderPass = render_pass,
+      .subpass = 0,
+      .basePipelineHandle = VK_NULL_HANDLE,
+      .basePipelineIndex = 0,
+  };
 
   VkPipeline pipeline = VK_NULL_HANDLE;
   if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipeline_info,
@@ -246,6 +266,6 @@ RenderingPipelineMaker::make_rendering_pipeline(
     throw exceptions::RenderingPipelineCreationError{};
   }
   return {pipeline, m_device};
-}
+} // namespace engine::core
 
 } // namespace engine::core

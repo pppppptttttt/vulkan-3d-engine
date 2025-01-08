@@ -4,6 +4,7 @@
 #include <cassert>                     // for assert
 #include <optional>                    // for optional
 #include <utility>                     // for unreachable
+#include <vulkan/vulkan_core.h>
 
 namespace engine::core {
 
@@ -29,11 +30,17 @@ CommandQueue::CommandQueue(VkPhysicalDevice physical_device,
   }
 }
 
-void CommandQueue::submit(const VkSubmitInfo &submit_info,
-                          VkFence fence) const {
+CommandQueue &CommandQueue::submit(const VkSubmitInfo &submit_info,
+                                   VkFence fence) {
   if (vkQueueSubmit(m_queue, 1, &submit_info, fence) != VK_SUCCESS) {
     throw exceptions::SubmitCommandBufferError{};
   }
+  return *this;
+}
+
+CommandQueue &CommandQueue::wait_idle() {
+  vkQueueWaitIdle(m_queue);
+  return *this;
 }
 
 } // namespace engine::core
