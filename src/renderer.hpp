@@ -1,15 +1,16 @@
 #pragma once
 
-#include "command_buffers.hpp" // for CommandBuffer, CommandPool
-#include "mesh.hpp"
-#include "queue.hpp"              // for CommandQueue
-#include "swapchain.hpp"          // for Window, Swapchain
+#include "command_buffers.hpp"    // for CommandPool, CommandBuffer
+#include "mesh.hpp"               // for Mesh
+#include "queue.hpp"              // for CommandQueue, CommandQueue::Kind::...
+#include "swapchain.hpp"          // for Swapchain, Window
 #include "synchronization.hpp"    // for Semaphore, Fence
 #include "vulkan_destroyable.hpp" // for VkDestroyable, VkDebugUtilsMesseng...
 #include <array>                  // for array
 #include <cstddef>                // for size_t
-#include <utility>
-#include <vulkan/vulkan_core.h> // for vkDeviceWaitIdle, VkDevice, VkInst...
+#include <utility>                // for unreachable
+#include <vector>                 // for vector
+#include <vulkan/vulkan_core.h>   // for VkDevice, VkPhysicalDevice, vkDevi...
 
 namespace engine::core {
 
@@ -49,6 +50,12 @@ public:
     }
   }
 
+  [[nodiscard]] VkRenderPass render_pass() const { return m_render_pass; }
+
+  [[nodiscard]] const Swapchain &swapchain() const { return m_swapchain; }
+
+  void submit_mesh(const resources::Mesh *mesh) { m_meshes.emplace_back(mesh); }
+
   Renderer(const Renderer &) = delete;
   Renderer(Renderer &&) noexcept = delete;
   Renderer &operator=(const Renderer &) = delete;
@@ -77,8 +84,8 @@ private:
   Swapchain m_swapchain;
 
   VkDestroyable<VkRenderPassWrapper> m_render_pass;
-  VkDestroyable<VkPipelineLayoutWrapper> m_pipeline_layout;
-  VkDestroyable<VkPipelineWrapper> m_pipeline;
+  /*VkDestroyable<VkPipelineLayoutWrapper> m_pipeline_layout;*/
+  /*VkDestroyable<VkPipelineWrapper> m_pipeline;*/
 
   CommandPool m_command_pool;
   CommandPool m_transfer_command_pool;
@@ -88,7 +95,8 @@ private:
   std::array<Semaphore, FRAME_OVERLAP> m_swapchain_semaphores;
   std::array<Semaphore, FRAME_OVERLAP> m_render_semaphores;
 
-  resources::Mesh m_mesh;
+  /*std::vector<std::unique_ptr<RenderObject>> m_render_objects;*/
+  std::vector<const resources::Mesh *> m_meshes;
 };
 
 } // namespace engine::core

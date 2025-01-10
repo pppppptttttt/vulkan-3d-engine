@@ -4,12 +4,6 @@
 #include <cstddef>                // for byte
 #include <vulkan/vulkan_core.h>   // for VkSharingMode, VkDeviceSize, VkBuffer
 
-namespace engine {
-namespace core {
-class Renderer;
-}
-} // namespace engine
-
 namespace engine::core {
 
 class Renderer;

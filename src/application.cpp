@@ -27,6 +27,9 @@ void Application::run() {
     }
 
     m_renderer.render_frame();
+    for (auto &object : m_render_objects) {
+      object->on_render_frame();
+    }
   }
   m_renderer.wait_idle();
 }

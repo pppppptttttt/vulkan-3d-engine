@@ -2,11 +2,13 @@
 
 #include "shader.hpp"             // for Shader
 #include "vulkan_destroyable.hpp" // for VkDestroyable, VkPipelineLayoutWra...
+#include <cstddef>                // for size_t
 #include <filesystem>             // for path
-#include <map>                    // for map
-#include <utility>                // for move, swap
-#include <vector>                 // for vector
-#include <vulkan/vulkan_core.h>   // for VK_FALSE, VkStructureType, VkColor...
+#include <map>                    // for map, swap
+#include <span>                   // for span
+#include <utility>                // for swap, move
+#include <vector>                 // for allocator, vector, swap
+#include <vulkan/vulkan_core.h>   // for VkDevice, VkDevice_T, VkPipelineLa...
 
 namespace engine::core {
 
@@ -105,7 +107,42 @@ public:
   ~RenderingPipelineMaker() = default;
 };
 
+VkPipelineLayoutCreateInfo make_default_pipeline_layout_create_info();
+
 VkDestroyable<VkPipelineLayoutWrapper>
 make_default_pipeline_layout(VkDevice device);
+
+template <typename T>
+  requires(sizeof(T) <= 128)
+struct PushConstant {
+  T data;
+  VkShaderStageFlags stages;
+};
+
+class PipelineLayoutMaker {
+private:
+  VkPipelineLayoutCreateInfo m_layout_info =
+      make_default_pipeline_layout_create_info();
+  VkDevice m_device = VK_NULL_HANDLE;
+  VkPushConstantRange m_range{};
+
+public:
+  PipelineLayoutMaker(VkDevice device) : m_device(device) {}
+
+  PipelineLayoutMaker &add_push_constant(VkShaderStageFlags stage_flags,
+                                         std::size_t size) {
+    m_range = {
+        .stageFlags = stage_flags,
+        .offset = 0,
+        .size = static_cast<unsigned>(size),
+    };
+    m_layout_info.pPushConstantRanges = &m_range;
+    m_layout_info.pushConstantRangeCount = 1;
+    return *this;
+  }
+
+  [[nodiscard]] VkDestroyable<VkPipelineLayoutWrapper>
+  make_pipeline_layout() const;
+};
 
 } // namespace engine::core

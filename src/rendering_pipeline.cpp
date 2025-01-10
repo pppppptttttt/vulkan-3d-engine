@@ -3,16 +3,14 @@
 #include <array>                 // for array
 #include <cstdio>                // for stderr
 #include <print>                 // for println
-#include <span>                  // for span
 #include <stdexcept>             // for out_of_range
 #include <vector>                // for vector
 #include <vulkan/vulkan_core.h>  // for VkStructureType, VkShaderStageFlagBits
 
 namespace engine::core {
 
-VkDestroyable<VkPipelineLayoutWrapper>
-make_default_pipeline_layout(VkDevice device) {
-  const VkPipelineLayoutCreateInfo layout_info{
+VkPipelineLayoutCreateInfo make_default_pipeline_layout_create_info() {
+  return VkPipelineLayoutCreateInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
@@ -21,12 +19,28 @@ make_default_pipeline_layout(VkDevice device) {
       .pushConstantRangeCount = 0,   // Optional
       .pPushConstantRanges = nullptr // Optional
   };
+}
+
+VkDestroyable<VkPipelineLayoutWrapper>
+make_default_pipeline_layout(VkDevice device) {
+  const VkPipelineLayoutCreateInfo layout_info =
+      make_default_pipeline_layout_create_info();
   VkPipelineLayout layout = VK_NULL_HANDLE;
   if (vkCreatePipelineLayout(device, &layout_info, nullptr, &layout) !=
       VK_SUCCESS) {
     throw exceptions::PipelineLayoutCreationError{};
   }
   return {layout, device};
+}
+
+[[nodiscard]] VkDestroyable<VkPipelineLayoutWrapper>
+PipelineLayoutMaker::make_pipeline_layout() const {
+  VkPipelineLayout layout = VK_NULL_HANDLE;
+  if (vkCreatePipelineLayout(m_device, &m_layout_info, nullptr, &layout) !=
+      VK_SUCCESS) {
+    throw exceptions::PipelineLayoutCreationError{};
+  }
+  return {layout, m_device};
 }
 
 RenderingPipelineMaker &RenderingPipelineMaker::set_shaders(
@@ -196,7 +210,7 @@ RenderingPipelineMaker::set_pipeline_layout(VkPipelineLayout layout) {
   return *this;
 }
 
-VkDestroyable<VkPipelineWrapper>
+[[nodiscard]] VkDestroyable<VkPipelineWrapper>
 RenderingPipelineMaker::make_rendering_pipeline(
     VkRenderPass render_pass) const {
   const VkPipelineViewportStateCreateInfo viewport_state = {
@@ -219,16 +233,6 @@ RenderingPipelineMaker::make_rendering_pipeline(
       .pAttachments = &m_color_blend_attachment,
       .blendConstants = {},
   };
-
-  /*const VkPipelineVertexInputStateCreateInfo vertex_input_info = {*/
-  /*    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,*/
-  /*    .pNext = nullptr,*/
-  /*    .flags = 0,*/
-  /*    .vertexBindingDescriptionCount = 0,*/
-  /*    .pVertexBindingDescriptions = nullptr,*/
-  /*    .vertexAttributeDescriptionCount = 0,*/
-  /*    .pVertexAttributeDescriptions = nullptr,*/
-  /*};*/
 
   std::array<VkDynamicState, 2> state = {VK_DYNAMIC_STATE_VIEWPORT,
                                          VK_DYNAMIC_STATE_SCISSOR};

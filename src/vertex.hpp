@@ -12,7 +12,7 @@ struct Vertex {
   glm::vec3 position; // NOLINT
   glm::vec2 uv;       // NOLINT
   glm::vec3 normal;   // NOLINT
-  glm::vec4 color;    // NOLINT
+  glm::vec3 color;    // NOLINT
 
   static VkVertexInputBindingDescription binding_description() noexcept {
     return {.binding = 0,
@@ -44,7 +44,7 @@ struct Vertex {
          {
              .location = 3,
              .binding = 0,
-             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+             .format = VK_FORMAT_R32G32B32_SFLOAT,
              .offset = offsetof(Vertex, color),
          }}};
   }

@@ -2,16 +2,11 @@
 #include "SDL3/SDL_error.h"            // for SDL_GetError
 #include "SDL3/SDL_video.h"            // for SDL_Window
 #include "engine_exceptions.hpp"       // for AcquireWindowExtensionsError
-#include "glm/detail/qualifier.hpp"    // for qualifier
-#include "glm/vec3.hpp"                // for vec<>::vec<3, type-parameter-...
-#include "glm/vec4.hpp"                // for vec<>::vec<4, type-parameter-...
+#include "material.hpp"                // for Material
 #include "mesh.hpp"                    // for Mesh
 #include "meta.hpp"                    // for VALIDATION_LAYERS, ENABLE_VAL...
 #include "physical_device_queries.hpp" // for QueueFamilyIndices, choose_ph...
-#include "rendering_pipeline.hpp"      // for RenderingPipelineMaker, make_...
-#include "shader.hpp"                  // for Shader
 #include "synchronization.hpp"         // for Semaphore, Fence
-#include "vertex.hpp"                  // for Vertex
 #include "vulkan_buffers.hpp"          // for Buffer
 #include "window.hpp"                  // for Window
 #include <SDL3/SDL_vulkan.h>           // for SDL_Vulkan_CreateSurface, SDL...
@@ -21,14 +16,11 @@
 #include <cstdint>                     // for uint64_t
 #include <cstdio>                      // for stderr
 #include <cstring>                     // for strcmp
-#include <filesystem>                  // for path
 #include <limits>                      // for numeric_limits
-#include <map>                         // for _Rb_tree_const_iterator, map
 #include <optional>                    // for optional
 #include <print>                       // for println
-#include <set>                         // for set
+#include <set>                         // for set, _Rb_tree_const_iterator
 #include <span>                        // for span
-#include <utility>                     // for pair
 #include <vector>                      // for vector
 #include <vulkan/vk_platform.h>        // for VKAPI_ATTR, VKAPI_CALL
 #include <vulkan/vulkan_core.h>        // for VkStructureType, VkResult
@@ -326,27 +318,29 @@ Renderer::Renderer(Window &window)
                        CommandQueue::Kind::TRANSFER),
       m_swapchain(m_device, m_physical_device, m_surface, window),
       m_render_pass(make_render_pass(m_device, m_swapchain), m_device),
-      m_pipeline_layout(make_default_pipeline_layout(m_device)),
+      /*m_pipeline_layout(make_default_pipeline_layout(m_device)),*/
       m_command_pool(m_device, m_physical_device, m_surface),
       m_transfer_command_pool(m_device, m_physical_device, m_surface, true) {
-  RenderingPipelineMaker pipeline_maker(m_device);
-  m_pipeline =
-      pipeline_maker.set_pipeline_layout(m_pipeline_layout)
-          .set_shaders({{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},
-                        {Shader::Stage::FRAGMENT, "triangle.frag.glsl.spv"}})
-          .set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-          .set_polygon_mode(VK_POLYGON_MODE_FILL)
-          .set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)
-          .set_no_multisampling()
-          .disable_blending()
-          .disable_depthtest()
-          .set_color_attachment_format(m_swapchain.image_format())
-          .set_depth_format(VK_FORMAT_UNDEFINED)
-          .set_vertex_description(
-              resources::Vertex::binding_description(),
-              std::span(resources::Vertex::attribute_description().data(),
-                        resources::Vertex::attribute_description().size()))
-          .make_rendering_pipeline(m_render_pass);
+  /*RenderingPipelineMaker pipeline_maker(m_device);*/
+  /*m_pipeline =*/
+  /*    pipeline_maker.set_pipeline_layout(m_pipeline_layout)*/
+  /*        .set_shaders({{Shader::Stage::VERTEX, "triangle.vert.glsl.spv"},*/
+  /*                      {Shader::Stage::FRAGMENT,
+   * "triangle.frag.glsl.spv"}})*/
+  /*        .set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)*/
+  /*        .set_polygon_mode(VK_POLYGON_MODE_FILL)*/
+  /*        .set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE)*/
+  /*        .set_no_multisampling()*/
+  /*        .disable_blending()*/
+  /*        .disable_depthtest()*/
+  /*        .set_color_attachment_format(m_swapchain.image_format())*/
+  /*        .set_depth_format(VK_FORMAT_UNDEFINED)*/
+  /*        .set_vertex_description(*/
+  /*            resources::Vertex::binding_description(),*/
+  /*            std::span(resources::Vertex::attribute_description().data(),*/
+  /*                      resources::Vertex::attribute_description().size()))*/
+  /*        .make_rendering_pipeline(m_render_pass);*/
+
   for (auto &semaphore : m_swapchain_semaphores) {
     semaphore = Semaphore(m_device);
   }
@@ -363,12 +357,15 @@ Renderer::Renderer(Window &window)
     m_command_buffers[i] = vec_command_buffers[i];
   }
 
-  std::vector<resources::Vertex> vertices = {
-      {{0.0f, -0.5f, 0.0f}, {}, {}, {1.0f, 0.0f, 1.0f, 1.0f}},
-      {{0.5f, 0.5f, 0.0f}, {}, {}, {0.0f, 1.0f, 1.0f, 1.0f}},
-      {{-0.5f, 0.5f, 0.0f}, {}, {}, {0.0f, 0.0f, 1.0f, 1.0f}}};
-
-  m_mesh = resources::Mesh(*this, vertices);
+  /*std::vector<resources::Vertex> vertices = {*/
+  /*    {{-0.5f, -0.5f, 0.0f}, {}, {}, {1.0f, 0.0f, 1.0f, 1.0f}},*/
+  /*    {{0.5f, -0.5f, 0.0f}, {}, {}, {0.0f, 1.0f, 1.0f, 1.0f}},*/
+  /*    {{0.5f, 0.5f, 0.0f}, {}, {}, {0.0f, 0.0f, 1.0f, 1.0f}},*/
+  /*    {{-0.5f, 0.5f, 0.0f}, {}, {}, {1.0f, 1.0f, 1.0f, 1.0f}}};*/
+  /**/
+  /*std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0};*/
+  /**/
+  /*m_meshes.emplace_back(*this, vertices, indices);*/
 }
 
 void Renderer::render_frame() {
@@ -400,66 +397,74 @@ void Renderer::render_frame() {
   m_render_fences[m_current_frame].reset();
 
   m_command_buffers[m_current_frame].reset();
-  auto draw_commands = [this, image_index](VkCommandBuffer command_buffer) {
-    const std::array<VkClearValue, 2> clear_values{
-        {{{{0.05f, 0.05f, 0.05f, 1.0f}}}, {{{1.0f, 0}}}}};
 
-    const VkRenderPassBeginInfo render_pass_begin{
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .pNext = nullptr,
-        .renderPass = m_render_pass,
-        .framebuffer = m_swapchain.framebuffers()[image_index],
-        .renderArea = {{0, 0}, m_swapchain.extent()},
-        .clearValueCount = static_cast<unsigned>(clear_values.size()),
-        .pClearValues = clear_values.data()};
-
-    vkCmdBeginRenderPass(command_buffer, &render_pass_begin,
-                         VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      m_pipeline);
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapchain.extent().width);
-    viewport.height = static_cast<float>(m_swapchain.extent().height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = m_swapchain.extent();
-    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
-
-    VkBuffer vertex_buffers[] = {m_mesh.vertices().buffer()};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
-
-    vkCmdEndRenderPass(command_buffer);
-  };
-  m_command_buffers[m_current_frame].record(draw_commands);
-
-  VkSemaphore wait_semaphores[] = {
+  const VkSemaphore wait_semaphores[] = {
       m_swapchain_semaphores[m_current_frame].semaphore()};
-  VkCommandBuffer command_buffers[] = {
+  const VkCommandBuffer command_buffers[] = {
       m_command_buffers[m_current_frame].buffer()};
-  VkSemaphore signal_semaphores[] = {
+  const VkSemaphore signal_semaphores[] = {
       m_render_semaphores[m_current_frame].semaphore()};
-  VkPipelineStageFlags wait_stages[] = {
+  const VkPipelineStageFlags wait_stages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-  const VkSubmitInfo submit_info{.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                 .pNext = nullptr,
-                                 .waitSemaphoreCount = 1,
-                                 .pWaitSemaphores = wait_semaphores,
-                                 .pWaitDstStageMask = wait_stages,
-                                 .commandBufferCount = 1,
-                                 .pCommandBuffers = command_buffers,
-                                 .signalSemaphoreCount = 1,
-                                 .pSignalSemaphores = signal_semaphores};
-  m_graphics_queue.submit(submit_info,
-                          m_render_fences[m_current_frame].fence());
+  for (const auto mesh : m_meshes) {
+    auto draw_mesh_commands = [this, image_index,
+                               mesh](VkCommandBuffer command_buffer) {
+      const std::array<VkClearValue, 2> clear_values{
+          {{{{0.05f, 0.05f, 0.05f, 1.0f}}}, {{{1.0f, 0}}}}};
+
+      const VkRenderPassBeginInfo render_pass_begin{
+          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+          .pNext = nullptr,
+          .renderPass = m_render_pass,
+          .framebuffer = m_swapchain.framebuffers()[image_index],
+          .renderArea = {{0, 0}, m_swapchain.extent()},
+          .clearValueCount = static_cast<unsigned>(clear_values.size()),
+          .pClearValues = clear_values.data()};
+
+      vkCmdBeginRenderPass(command_buffer, &render_pass_begin,
+                           VK_SUBPASS_CONTENTS_INLINE);
+      vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        mesh->pipeline());
+      mesh->material()->update_push_constants(command_buffer);
+
+      VkViewport viewport{};
+      viewport.x = 0.0f;
+      viewport.y = 0.0f;
+      viewport.width = static_cast<float>(m_swapchain.extent().width);
+      viewport.height = static_cast<float>(m_swapchain.extent().height);
+      viewport.minDepth = 0.0f;
+      viewport.maxDepth = 1.0f;
+      vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+
+      VkRect2D scissor{};
+      scissor.offset = {0, 0};
+      scissor.extent = m_swapchain.extent();
+      vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+      VkBuffer vertex_buffers[] = {mesh->vertices().buffer()};
+      VkDeviceSize offsets[] = {0};
+      vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
+      vkCmdBindIndexBuffer(command_buffer, mesh->indices().buffer(), 0,
+                           VK_INDEX_TYPE_UINT32);
+      vkCmdDrawIndexed(command_buffer, mesh->indices_size(), 1, 0, 0, 0);
+
+      vkCmdEndRenderPass(command_buffer);
+    };
+    m_command_buffers[m_current_frame].record(draw_mesh_commands);
+
+    const VkSubmitInfo submit_info{.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .pNext = nullptr,
+                                   .waitSemaphoreCount = 1,
+                                   .pWaitSemaphores = wait_semaphores,
+                                   .pWaitDstStageMask = wait_stages,
+                                   .commandBufferCount = 1,
+                                   .pCommandBuffers = command_buffers,
+                                   .signalSemaphoreCount = 1,
+                                   .pSignalSemaphores = signal_semaphores};
+    m_graphics_queue.submit(submit_info,
+                            m_render_fences[m_current_frame].fence());
+  }
 
   VkSwapchainKHR swapchain_ptr[] = {m_swapchain.swapchain()};
   const VkPresentInfoKHR present_info{

@@ -10,7 +10,7 @@ namespace engine {
 static constexpr std::string_view APPLICATION_NAME = "Vulkan 3D engine";
 
 #ifndef CUSTOM_PATH_TO_BINARIES
-inline static const std::filesystem::path PATH_TO_BINARIES = "../../bin/";
+inline static const std::filesystem::path PATH_TO_BINARIES = "../";
 #else
 inline static const std::filesystem::path PATH_TO_BINARIES =
     CUSTOM_PATH_TO_BINARIES;

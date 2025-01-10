@@ -63,9 +63,13 @@ add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 include_directories(src/)
 include_directories(third-party/)
 
-file (GLOB_RECURSE CPP_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
-add_executable(${PROJECT_NAME} ${CPP_SOURCES})
+file(GLOB_RECURSE LIB_CPP_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
+add_library(${PROJECT_NAME} ${LIB_CPP_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan SDL3::SDL3-static glm::glm)
+
+add_executable(samples main.cpp)
+target_link_libraries(samples PUBLIC ${PROJECT_NAME})
+target_include_directories(samples PUBLIC third-party/SDL/include third-party/glm/)
 
 # if directory with binaries located not in `./bin/`, you can specify
 # it's location by passing `-DCUSTOM_PATH_TO_BINARIES=/path/to/bin`
